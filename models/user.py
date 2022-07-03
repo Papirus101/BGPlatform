@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, EmailStr, validator
 
-from enum import Enum, IntEnum
+from enum import Enum
 
 import re
 
@@ -16,17 +16,24 @@ class UserLoginSchema(BaseModel):
     password: str
 
 
-class UserRegisterSchema(BaseModel):
-    login: str = Field(default=None)
-    email: EmailStr = Field(default=None)
-    inn: int = Field(default=None, max_length=10)
-    fio: str = Field(default=None)
+class UserInfoSchema(BaseModel):
+    login: str
+    email: str
+    inn: int = Field(lt=9999999999)
+    fio: str
     phone: str
-    password: str = Field(default=None)
-    user_type: UserTypes = UserTypes.client
+    user_type: UserTypes
+
+
+class UserAllInfoSchema(UserInfoSchema):
+    image: str | None
+
+
+class UserRegisterSchema(UserInfoSchema):
+    password: str = Field()
 
     @validator('phone')
-    def phone_validator(self, v):
+    def phone_validator(cls, v):
         regex = r"^(\+)7[0-9\-\(\)\.]{9,15}$"
         if v and not re.search(regex, v, re.I):
             raise ValueError('Phone number invalid')

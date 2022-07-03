@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from db.base import Base
 from db.session import engine
 
+from routes.users_router import users_router
+
 app = FastAPI()
 
 
@@ -12,6 +14,4 @@ async def startup_event():
         await conn.run_sync(Base.metadata.create_all)
 
 
-@app.get('/')
-async def main_page():
-    return {'hello': 'world'}
+app.include_router(users_router)
