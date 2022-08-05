@@ -4,9 +4,12 @@ from depends.auth.jwt_bearer import OAuth2PasswordBearerCookie
 from depends.auth.password_hash import hash_password, validate_password
 from depends.auth.jwt_handler import signJWT, get_login_by_token
 
-from models.user import UserRegisterSchema, UserLoginSchema, UserInfoSchema, UserAllInfoSchema
-from db.queries.users_q import create_new_user, get_user_by_login
+from models.user import UserRegisterSchema, UserLoginSchema, UserInfoSchema, UserAllInfoSchema, UserUpdateSchema, \
+    UserDeleteSchema
+from db.queries.users_q import create_new_user, get_user_by_login, update_user_info_q
 from db.session import async_sessionmaker
+
+from parser.parser_zakupki import ZachetniyBiznesParser
 
 users_router = APIRouter(
     prefix='/user',
@@ -14,14 +17,17 @@ users_router = APIRouter(
 )
 
 
-@users_router.post('/signup', status_code=201)
+@users_router.post('/signup', status_code=201, responses={400: {'error': 'inn invalid'}})
 async def user_signup(response: Response, user: UserRegisterSchema = Body()):
     user.password = await hash_password(user.password)
+    session = ZachetniyBiznesParser()
+    user.name_organization = await session.get_company_name(user.inn)
+    await session.close_session()
     new_user = await create_new_user(async_sessionmaker, **dict(user))
     if new_user is not None and 'error' in new_user:
         raise HTTPException(400, new_user)
     token = await signJWT(user.login)
-    response.set_cookie('Bearer', token['access_token'], expires=token['expires'])
+    response.set_cookie('Authorization', f"Bearer {token['access_token']}", expires=token['expires'])
     return True
 
 
@@ -43,3 +49,40 @@ async def get_user_info(request: Request):
     user_login = await get_login_by_token(token)
     user_info = await get_user_by_login(async_sessionmaker, user_login)
     return user_info.__dict__
+
+
+@users_router.put('/me', dependencies=[Depends(OAuth2PasswordBearerCookie())], response_model=UserAllInfoSchema)
+async def update_user_info(request: Request, user: UserUpdateSchema = Body()):
+    if user.user_id is None:
+        _, token = request.cookies.get('Authorization').split()
+        user_login = await get_login_by_token(token)
+        user = dict(user)
+        user_info = {}
+        for elem in user.keys():
+            if user[elem] is not None:
+                if elem == 'password':
+                    user_info[elem] = await hash_password(user[elem])
+                    continue
+                user_info[elem] = user[elem]
+        await update_user_info_q(async_sessionmaker, user_login, **user_info)
+        new_user_info = await get_user_by_login(async_sessionmaker, user_login)
+        return new_user_info.__dict__
+
+
+@users_router.get('/logout', dependencies=[Depends(OAuth2PasswordBearerCookie())])
+async def logout(response: Response):
+    response.delete_cookie('Authorization')
+    return True
+
+
+@users_router.post('/delete_user', dependencies=[Depends(OAuth2PasswordBearerCookie())])
+async def delete_user(response: Response, request: Request, info: UserDeleteSchema = Body()):
+    _, token = request.cookies.get('Authorization').split()
+    user_login = await get_login_by_token(token)
+    info_deleted = dict(info)
+    new_info = {'deleted': True}
+    for elem in info_deleted.keys():
+        if info_deleted[elem] is not None:
+            new_info[elem] = info_deleted[elem]
+    await update_user_info_q(async_sessionmaker, user_login, **new_info)
+    response.delete_cookie('Authorization')
