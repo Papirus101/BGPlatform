@@ -1,11 +1,11 @@
 import datetime
-from sqlalchemy.exc import NoResultFound
+from sqlalchemy.exc import NoResultFound, DBAPIError
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from db.models.banks import Banks, FZTypes
 
 from db.models.bg_request import BGRequest, BGTypes, WorksSpecifics
-from db.models.users import User
+
 
 
 async def add_new_bg_request(db_session,
@@ -29,9 +29,12 @@ async def add_new_bg_request(db_session,
                                    last_quarter=last_quarter,
                                    specifics_of_work_id=specifics_of_work,
                                    lesion_amount=lesion_amount)
-        session.add(new_bg_request)
-        await session.flush()
-        await session.commit()
+        try:
+            session.add(new_bg_request)
+            await session.flush()
+            await session.commit()
+        except DBAPIError:
+            return {'error': 'INN invalid'}
         return new_bg_request
 
 
@@ -133,26 +136,35 @@ async def bg_request_banks_insert(db_session, request_id: int):
         data = data.all()
         for bank in data:
             bank = bank[0]
-            if len(bank.fz_types) > 0 and request.company_fz.id not in bank.fz_types:
+            if len(bank.fz_types) > 0 and request.company_fz not in bank.fz_types:
+                for fz in bank.fz_types:
+                    print(request.company_fz.id, fz.id)
+                    print(bank.name, fz.id, fz.name)
+                print('fz')
                 continue
-            if len(bank.bg_types) > 0 and request.bg_info.id not in bank.bg_types:
+            if len(bank.bg_types) > 0 and request.bg_info not in bank.bg_types:
+                print('bg')
                 continue
             if bank.min_guarante is not None and bank.max_guarante is not None and \
                     bank.min_guarante > request.amount or bank.max_guarante < request.amount:
                 continue
             if bank.min_days is not None and bank.max_days is not None and \
                     bank.min_days > request.days or bank.max_days < request.days:
+                print('min max days', request.days, bank.min_days, bank.max_days)
                 continue
-            if len(bank.company_type) > 0 and request.company_types.id not in bank.company_type:
-                continue
+            # if len(bank.company_type) > 0 and request.company_types not in bank.company_type:
+            #    print('company_type')
+            #    continue
             company_days = datetime.datetime.strptime(request.company_date_register, '%d.%m.%Y')
             company_days = datetime.datetime.today() - company_days
             if company_days.days < bank.min_company_dates:
+                print('company_days')
                 continue
             if request.company_auth_capital < bank.authorized_capital:
+                print('auth cap')
                 continue
             if not bank.mass_address:
-                if request.mass_address:
+                if request.company_mass_address:
                     continue
             if bank.percent_revenue is not None and bank.percent_revenue > 0:
                 company_revenue = request.company_last_revenue_sum * (bank.percent_revenue / 100)

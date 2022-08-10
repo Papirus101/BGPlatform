@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Body, Depends, Request
+from fastapi import APIRouter, HTTPException, Body, Depends, Request, Response
 from db.queries.banks_q import get_all_banks
 
 from db.queries.bg_request_q import add_new_bg_request, bg_request_banks_insert, get_bg_types_q, get_fz_type_by_name, get_specifics_works_q, get_user_requests_query, get_user_request_query, test_query
@@ -10,6 +10,8 @@ from db.session import async_sessionmaker
 from parser.parser_zakupki import ZakupkiParse
 from rabbit_send.publisher import send_message
 
+import settings
+
 bg_request_router = APIRouter(prefix='/bg_request',
                               tags=['bg_request'])
 
@@ -17,8 +19,10 @@ bg_request_router = APIRouter(prefix='/bg_request',
 @bg_request_router.post('/new_bg_request', dependencies=[Depends(OAuth2PasswordBearerCookie())],
                         response_model=BGRequestCreateSchema)
 async def create_new_bg_request(request: Request, bg_request: BGRequestCreateSchema = Body()):
-    user = await get_user_by_token(request.cookies)
+    user = await get_user_by_token(request.cookies.get('Authorization').split()[1] if not settings.DEBUG else request.headers.get('Authorization').split()[1])
     new_bg = await add_new_bg_request(async_sessionmaker, user_id=user.id, **(dict(bg_request)))
+    if new_bg is not None and isinstance(new_bg, dict) and 'error' in new_bg:
+        raise HTTPException(404, new_bg)
     await send_message(f'{bg_request.inn}_{new_bg.id}', 'parse_zachet')
     await send_message(f'{bg_request.purchase_number}_{new_bg.id}', 'parse_zakupki')
     return bg_request
@@ -28,7 +32,7 @@ async def create_new_bg_request(request: Request, bg_request: BGRequestCreateSch
                         response_model=BGRequestDetailInfoSchema,
                         responses={404: {'NOT FOUND': "NOT FOUND REQUESTS FROM USER"}})
 async def get_user_request_info(request: Request, request_id: int):
-    user = await get_user_by_token(request.cookies)
+    user = await get_user_by_token(request.cookies.get('Authorization').split()[1] if not settings.DEBUG else request.headers.get('Authorization').split()[1])
     data = await get_user_request_query(async_sessionmaker, user.id, request_id)
     if data is None:
         raise HTTPException(404, {'NOT FOUND': "NOT FOUND REQUESTS FROM USER"})
@@ -38,7 +42,7 @@ async def get_user_request_info(request: Request, request_id: int):
 @bg_request_router.get('/get_user_requests', dependencies=[Depends(OAuth2PasswordBearerCookie())],
                        response_model=BGRequestsListSchema)
 async def get_user_requests(request: Request):
-    user = await get_user_by_token(request.cookies)
+    user = await get_user_by_token(request.cookies.get('Authorization').split()[1] if not settings.DEBUG else request.headers.get('Authorization').split()[1])
     data = await get_user_requests_query(async_sessionmaker, user.id)
     return BGRequestsListSchema.parse_obj({'requests': data})
 

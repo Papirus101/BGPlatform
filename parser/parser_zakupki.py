@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import async_session
 
 from db.queries.bg_request_q import get_fz_type_by_name, update_request_info
 from db.session import async_sessionmaker
+from utils.bot import send_telegram_error
 
 load_dotenv('.env')
 
@@ -26,8 +27,8 @@ class ZakupkiParse:
         #print('Connection create')
         self.company_data = {}
         options = Options()
-        options.add_argument("--headless")
-        self.driver = webdriver.Firefox(options=options)
+        #options.add_argument("--headless")
+        self.driver = webdriver.Firefox()
         # jar = aiohttp.CookieJar(unsafe=True, quote_cookie=False)
         self.session = aiohttp.ClientSession()
         self.base_url = 'https://zakupki.gov.ru/epz/main/public/home.html'
@@ -44,11 +45,7 @@ class ZakupkiParse:
         if request.status != 200:
             return False
         return True
-
-    # async def session_close(self):
-    #     await self.session.close()
-
-
+ 
     async def _get_cookie(self):
         driver = webdriver.Firefox()
         driver.get(self.domain)
@@ -62,69 +59,90 @@ class ZakupkiParse:
                 self.driver.get(url)
             except:
                 pass
-        # print("\033[1m", f"[{purchase_id}]", "\033[0m", f"Create first request by {name}")
+
         while True:
+            print(itter)
+            if itter >= 20:
+                self.driver.get(self.base_url)
+                self.driver.get(url)
+                itter = 0
             try:
                 r = await self.session.get(url)
             except:
                 r = await self.session.get(url)
-            # print(url)
-            # print("\033[1m", f"[{purchase_id}]", "\033[0m", f"Try create request by {name} #{itter}, status:", "\033[1m", "\033[31m" if r.status != 200 else "\033[32m", r.status, "\033[0m")
             if r.status == 200:
                 break
             itter += 1
             await asyncio.sleep(7)
         return r
 
-
-    async def test(self, purchase_id: str, request_id: int):
-        # await self.__create_request(self.domain, 'domain page', purchase_id)
-        await self.__create_request(self.base_url, 'base page', purchase_id)
-        await self.__create_request(self.base_search_url, 'base search url', purchase_id)
-        # await self.session.get('https://zakupki.gov.ru/epz/static/js/templates/analyticsStatisticsTemplates.htm')
-        await asyncio.sleep(5)
-        search_page = await self.__create_request(self.search_url.format(purchase_id=purchase_id), 'search page', purchase_id)
-        soup = bss(await search_page.text(), 'html.parser')
-        href = soup.find('div', {'class': 'registry-entry__header-mid__number'}).find('a').get('href')
-        await asyncio.sleep(5)
-        data_page = await self.__create_request(self.domain + href, 'data page', purchase_id)
-        soup = bss(await data_page.text(), 'html.parser')
-        try:
-            fz = soup.find('div', {'class': 'registry-entry__header-top__title'}).text
-        except:
-            fz = soup.find('div', {'class': 'cardMainInfo__title'}).text
-        self.company_data['company_fz'] = ''.join(re.findall(r'\d+', fz.split('ФЗ')[0]))
-        if self.company_data['company_fz'] == '223':
-            #self.company_data['inn'] = soup.find('div', text='ИНН').findParent('div').find('div', {'class': 'ml-1'}).text
-            lots_link = soup.find_all('a', {'class': 'tabsNav__item'})[1].get('href')
-            lots_page = await self.__create_request(self.domain + lots_link, 'lots page', purchase_id)
-            soup = bss(await lots_page.text(), 'html.parser')
-            lot_link = soup.find('div', {'id': 'inner-html'}).find('a', {'target': '_blank'}).get('href')
-            lot_page = await self.__create_request(self.domain + lot_link, 'lot page', purchase_id)
-            soup = bss(await lot_page.text(), 'html.parser')
-            self.company_data['company_address'] = soup.find('div', {'class': 'common-text__value_no-padding'})
-            if self.company_data['company_address'] is None:
-                self.company_data['company_address'] = ''
-            else:
-                self.company_data['company_address'] = self.company_data['company_address'].text.split
-        elif self.company_data['company_fz'] == '44':
-            self.company_data['company_address'] = soup.find(
+    async def fz_233_get_data(self, soup, purchase_id):
+        lots_link = soup.find_all('a', {'class': 'tabsNav__item'})[1].get('href')
+        lots_page = await self.__create_request(self.domain + lots_link, 'lots page', purchase_id)
+        soup = bss(await lots_page.text(), 'html.parser')
+        lot_link = soup.find('div', {'id': 'inner-html'}).find('a', {'target': '_blank'}).get('href')
+        lot_page = await self.__create_request(self.domain + lot_link, 'lot page', purchase_id)
+        soup = bss(await lot_page.text(), 'html.parser')
+        self.company_data['company_address'] = soup.find('div', {'class': 'common-text__value_no-padding'})
+        if self.company_data['company_address'] is None:
+            self.company_data['company_address'] = ''
+        else:
+            self.company_data['company_address'] = self.company_data['company_address'].text.strip()
+    
+    
+    async def fz_44_get_data(self, soup, purchase_id):
+        self.company_data['company_address'] = soup.find(
                     'span', text='Место нахождения'
                     ).findParent(
                     'section', {'class': 'blockInfo__section'}
                     ).find(
                     'span', {'class': 'section__info'}
                     ).text.strip()
-            organization_link = soup.find(
-                    'span', text='Размещение осуществляет'
-                    ).findParent(
-                    'section', {'class': 'blockInfo__section'}).find(
-                    'a', {'target': '_blank'}).get('href')
-            organization_page = await self.__create_request(organization_link, 'organization page', purchase_id)
-            soup = bss(await organization_page.text(), 'html.parser')
-            #self.company_data['inn'] = soup.find('div', text='ИНН').findParent(
-            #        'div', {'class': 'col-md-auto'}).find(
-            #        'div', {'class': 'registry-entry__body-value'}).text
+        organization_link = soup.find(
+                'span', text='Размещение осуществляет'
+                ).findParent(
+                'section', {'class': 'blockInfo__section'}).find(
+                'a', {'target': '_blank'}).get('href')
+        organization_page = await self.__create_request(organization_link, 'organization page', purchase_id)
+        soup = bss(await organization_page.text(), 'html.parser')
+
+    async def test(self, purchase_id: str, request_id: int):
+        await self.__create_request(self.base_url, 'base page', purchase_id)
+        await self.__create_request(self.base_search_url, 'base search url', purchase_id)
+        await asyncio.sleep(5)
+
+        search_page = await self.__create_request(self.search_url.format(purchase_id=purchase_id), 'search page', purchase_id)
+        soup = bss(await search_page.text(), 'html.parser')
+        try:
+            href = soup.find('div', {'class': 'registry-entry__header-mid__number'}).find('a').get('href')
+        except AttributeError:
+            await send_telegram_error(f'🛒 <strong>Закупки</strong> Ошибка при парсинге информации ИД: {purchase_id}')
+            await self.session.close()
+            self.driver.close()
+            return None
+        await asyncio.sleep(5)
+
+        data_page = await self.__create_request(self.domain + href, 'data page', purchase_id)
+        soup = bss(await data_page.text(), 'html.parser')
+
+        # Начало парсинга страницы
+        try:
+            fz = soup.find('div', {'class': 'registry-entry__header-top__title'}).text
+        except:
+            fz = soup.find('div', {'class': 'cardMainInfo__title'}).text
+        self.company_data['company_fz'] = ''.join(re.findall(r'\d+', fz.split('ФЗ')[0]))
+
+        # В зависимости от типа ФЗ, парсим данные
+        if self.company_data['company_fz'] == '223':
+            try:
+                await self.fz_233_get_data(soup, purchase_id)
+            except Exception as e:
+                await send_telegram_error(e)
+        elif self.company_data['company_fz'] == '44':
+            try:
+                await self.fz_44_get_data(soup, purchase_id)
+            except Exception as e:
+                await send_telegram_error(e)
         await self.session.close()
         self.driver.close()
         self.company_data['company_fz_id'] = await get_fz_type_by_name(
@@ -132,56 +150,8 @@ class ZakupkiParse:
                 ''.join(i for i in re.findall(r'\d+', self.company_data['company_fz']))
             )
         del self.company_data['company_fz']
+        await send_telegram_error(f'🛒 <strong>Закупки</strong>Спарсили информацию о компании {self.company_data}')
         await update_request_info(async_sessionmaker, request_id, **self.company_data)
-
-
-    #def get_data_request(self, purchase_id: str):
-    #    inn = 0
-    #    address = None
-    #    fz = ''
-    #    self.driver.get(self.base_url)
-    #    self.driver.get(self.search_url.format(purchase_id=purchase_id))
-    #    link = self.driver.find_element(
-    #        By.CLASS_NAME, 'registry-entry__header-mid__number').find_element(By.TAG_NAME, 'a').get_attribute('href')
-    #    self.driver.get(link + '&ppRf615=on&fz94=on')
-    #    try:
-    #        fz = self.driver.find_element(By.CLASS_NAME, 'registry-entry__header-top__title').text.strip()
-    #    except NoSuchElementException:
-    #        fz = self.driver.find_element(By.CLASS_NAME, 'cardMainInfo__title').text.strip()
-    #    fz = ''.join(re.findall(r'\d', fz))
-    #    if fz == '223':
-    #        inn = self.driver.find_element(By.CLASS_NAME, 'ml-1').text.strip()
-    #        lots_link = self.driver.find_elements(By.CLASS_NAME, 'tabsNav__item')[1].get_attribute('href')
-    #        self.driver.get(lots_link)
-    #        link = self.driver.find_element(By.CLASS_NAME, 'table').find_element(By.CSS_SELECTOR,
-    #                                                                             "[target='_blank']").get_attribute(
-    #            'href')
-    #        self.driver.get(link)
-    #        try:
-    #            address = self.driver.find_element(By.CSS_SELECTOR,
-    #                                               '[class="common-text__value common-text__value_no-padding"]').text.strip()
-    #        except NoSuchElementException:
-    #            address = None
-    #    else:
-    #        addresses = self.driver.find_elements(By.CLASS_NAME, 'card-common-content')[1].find_elements(
-    #            By.CLASS_NAME, 'blockInfo__section')
-    #        for ad in addresses:
-    #            if ad.find_element(By.CLASS_NAME, 'section__title').text.strip().find('Место нахождения') > -1:
-    #                address = ad.find_element(By.CLASS_NAME, 'section__info').text.strip()
-    #                break
-    #        zakaz_link = self.driver.find_element(By.CLASS_NAME, 'blockInfo').find_elements(By.CSS_SELECTOR,
-    #                                                                                        '[target="_blank"]')
-    #        for lk in zakaz_link:
-    #            if lk.get_attribute('href').find('https://zakupki.gov.ru/epz/organization') > -1:
-    #                link = lk.get_attribute('href')
-    #                break
-    #        self.driver.get(link)
-    #        inn = self.driver.find_element(By.CLASS_NAME, 'search-registry-entry-block').find_elements(
-    #            By.CLASS_NAME, 'registry-entry__body-block')[1].find_elements(
-    #            By.CLASS_NAME, 'registry-entry__body-value')[1].text.strip()
-    #    self.driver.close()
-    #    print(fz, inn, address)
-    #    return True
 
 
 class ZachetniyBiznesParser:
@@ -199,6 +169,10 @@ class ZachetniyBiznesParser:
     async def get_company_name(self, inn: int | str):
         page = await self.session.get(f'{self.search_url}{self.token}&string={str(inn)}')
         data = await page.json()
+        if data.get('status') != '200':
+            await send_telegram_error(f'🏪 <strong>Зачётный бизнес</strong> не получилось спарсить имя по ИНН {inn}')
+            await self.session.close()
+            return None       
         try:
             name = data.get('body').get('docs')[0].get('НаимЮЛСокр')
         except IndexError:
@@ -275,4 +249,5 @@ class ZachetniyBiznesParser:
                             'IS_RESIDENT') if datas.get('@attributes').get('IS_RESIDENT') is not None else True
                         break
         await self.session.close()
+        await send_telegram_error(f'🏪 <strong>Зачётный бизнес</strong> спарсили информацию {self.company_data}')
         await update_request_info(async_sessionmaker, request_id, **self.company_data)

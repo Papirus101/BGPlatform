@@ -6,6 +6,7 @@ from fastapi.security.utils import get_authorization_scheme_param
 
 from depends.auth.jwt_handler import decodeJWT
 
+import settings
 
 class OAuth2PasswordBearerCookie(OAuth2):
     def __init__(
@@ -15,8 +16,11 @@ class OAuth2PasswordBearerCookie(OAuth2):
         super().__init__(auto_error=auto_error)
 
     async def __call__(self, request: Request) -> Optional[str]:
-        cookie_authorization: str = request.cookies.get("Authorization")
-
+        if settings.DEBUG:
+            cookie_authorization: str = request.headers.get("Authorization")
+        else:
+            cookie_authorization: str = request.cookies.get("Authorization")
+        
         cookie_scheme, cookie_param = get_authorization_scheme_param(
             cookie_authorization
         )

@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from sqlalchemy.exc import IntegrityError, NoResultFound
+from sqlalchemy.exc import IntegrityError, NoResultFound, DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 
@@ -16,7 +16,9 @@ async def create_new_user(
         try:
             await session.commit()
         except IntegrityError:
-            return {'error': 'Login or email is already exists'}
+            raise HTTPException(400, 'Login or email is already exists')
+        except DBAPIError:
+            raise HTTPException(400, 'INN invalid')
 
 
 async def get_user_by_login(db_session: AsyncSession,
@@ -28,13 +30,15 @@ async def get_user_by_login(db_session: AsyncSession,
             data = data.one()
             data = data[0]
         except NoResultFound:
-            raise HTTPException(404, {'error': 'user not found'})
+            raise HTTPException(404, 'user not found')
         return data
 
 
 async def update_user_info_q(db_session: AsyncSession, login: int, **kwargs):
     async with db_session() as session:
         sql = update(User).where(User.login == login).values(**kwargs)
-        await session.execute(sql)
-        await session.commit()
-
+        try:
+            await session.execute(sql)
+            await session.commit()
+        except DBAPIError:
+            raise HTTPException(400)

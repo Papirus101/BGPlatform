@@ -19,9 +19,11 @@ async def on_message_zachet(message: AbstractIncomingMessage) -> None:
 
 async def on_message_zakupki(message: AbstractIncomingMessage) -> None:
     session = ZakupkiParse()
-    print('Start patse zakupki')
+    print('Start parse zakupki')
     purchase_id, request_id = message.body.decode().split('_')
-    await session.test(purchase_id, int(request_id))
+    info = await session.test(purchase_id, int(request_id))
+    if info is None:
+        return
     await send_message(request_id, 'start_scoring')
 
 

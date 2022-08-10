@@ -26,6 +26,10 @@ class UserInfoSchema(BaseModel):
     user_type: UserTypes
 
 
+class LoginResponseSchema(BaseModel):
+    user_info: UserInfoSchema
+    Authorization: str
+
 class UserAllInfoSchema(UserInfoSchema):
     image: str | None
 

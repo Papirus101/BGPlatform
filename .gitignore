@@ -154,5 +154,7 @@ cython_debug/
 
 .idea/
 
-migration/env.py
+migration/
+pyrightconfig.json
+alembic.ini
 
