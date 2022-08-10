@@ -1,6 +1,7 @@
 import aiohttp
 import os
 import re
+import traceback
 
 import asyncio
 
@@ -13,7 +14,6 @@ from selenium import webdriver
 from selenium.webdriver.firefox.options import Options
 
 from bs4 import BeautifulSoup as bss
-from sqlalchemy.ext.asyncio import async_session
 
 from db.queries.bg_request_q import get_fz_type_by_name, update_request_info
 from db.session import async_sessionmaker
@@ -27,8 +27,8 @@ class ZakupkiParse:
         #print('Connection create')
         self.company_data = {}
         options = Options()
-        #options.add_argument("--headless")
-        self.driver = webdriver.Firefox()
+        options.add_argument("--headless")
+        self.driver = webdriver.Firefox(options=options)
         # jar = aiohttp.CookieJar(unsafe=True, quote_cookie=False)
         self.session = aiohttp.ClientSession()
         self.base_url = 'https://zakupki.gov.ru/epz/main/public/home.html'
@@ -136,13 +136,13 @@ class ZakupkiParse:
         if self.company_data['company_fz'] == '223':
             try:
                 await self.fz_233_get_data(soup, purchase_id)
-            except Exception as e:
-                await send_telegram_error(e)
+            except:
+                await send_telegram_error(traceback.format_exc())
         elif self.company_data['company_fz'] == '44':
             try:
                 await self.fz_44_get_data(soup, purchase_id)
-            except Exception as e:
-                await send_telegram_error(e)
+            except:
+                await send_telegram_error(traceback.format_exc())
         await self.session.close()
         self.driver.close()
         self.company_data['company_fz_id'] = await get_fz_type_by_name(
