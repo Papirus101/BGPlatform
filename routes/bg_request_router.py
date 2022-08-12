@@ -42,7 +42,7 @@ async def get_user_request_info(request: Request, request_id: int):
 @bg_request_router.get('/get_user_requests', dependencies=[Depends(OAuth2PasswordBearerCookie())],
                        response_model=BGRequestsListSchema)
 async def get_user_requests(request: Request):
-    user = await get_user_by_token(await get_user_by_token(request))
+    user = await get_user_by_token(await get_user_token(request))
     data = await get_user_requests_query(async_sessionmaker, user.id)
     return BGRequestsListSchema.parse_obj({'requests': data})
 
