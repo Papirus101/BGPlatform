@@ -14,16 +14,18 @@ class BGRequestCreateSchema(BaseModel):
 
 
 class BankInfo(BaseModel):
-    name: str
-    max_days: int
+    bank_id: int
+    bank_name: str
+    bank_stavka: int
+    brokers_terms: int
 
 class BGRequestDetailInfoSchema(BaseModel):
-    purchase_number: str
-    company_name: str
-    amount: int
+    id: int
     inn: int
-    banks_ids: list
-
+    purchase_number: str
+    amount: int
+    days: int
+    banks: list[BankInfo]
 
 class BGTypesSpecificsSchema(BaseModel):
     id: int

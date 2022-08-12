@@ -11,7 +11,7 @@ from db.session import async_sessionmaker
 
 from parser.parser_zakupki import ZachetniyBiznesParser
 import settings
-from utils.bot import send_telegram_error
+from utils.utils import get_user_token
 
 users_router = APIRouter(
     prefix='/user',
@@ -64,10 +64,7 @@ async def user_login(response: Response, user: UserLoginSchema = Body()):
 
 @users_router.get('/me', dependencies=[Depends(OAuth2PasswordBearerCookie())], response_model=UserAllInfoSchema)
 async def get_user_info(request: Request):
-    if settings.DEBUG:
-        token = request.headers.get('Authorization').split()
-    else:
-        _, token = request.cookies.get('Authorization').split()
+    token = await get_user_token(request)
     user_login = await get_login_by_token(token)
     user_info = await get_user_by_login(async_sessionmaker, user_login)
     return user_info.__dict__
@@ -76,20 +73,18 @@ async def get_user_info(request: Request):
 @users_router.put('/me', dependencies=[Depends(OAuth2PasswordBearerCookie())], response_model=UserAllInfoSchema)
 async def update_user_info(request: Request, user: UserUpdateSchema = Body()):
     if user.user_id is None:
-        if settings.DEBUG:
-            token = request.headers.get('Authorization').split()
-        else:
-            _, token = request.cookies.get('Authorization').split()
+        token = await get_user_token(request)
         user_login = await get_login_by_token(token)
-        user = dict(user)
-        user_info = {}
-        for elem in user.keys():
-            if user[elem] is not None:
-                if elem == 'password':
-                    user_info[elem] = await hash_password(user[elem])
-                    continue
-                user_info[elem] = user[elem]
-        await update_user_info_q(async_sessionmaker, user_login, **user_info)
+        user: dict = {k:v for k, v in user.__dict__.items() if v is not None}
+        if 'password' in user:
+            user['password'] = await hash_password(user['password'])
+        if 'inn' in user:
+            session = ZachetniyBiznesParser()
+            user['name_organization'] = await session.get_company_name(user['inn'])
+            if user['name_organization'] is None:
+                raise HTTPException(400, 'Invalid inn')
+            await session.close_session()
+        await update_user_info_q(async_sessionmaker, user_login, **user)
         new_user_info = await get_user_by_login(async_sessionmaker, user_login)
         return new_user_info.__dict__
 
@@ -102,10 +97,7 @@ async def logout(response: Response):
 
 @users_router.post('/delete_user', dependencies=[Depends(OAuth2PasswordBearerCookie())])
 async def delete_user(response: Response, request: Request, info: UserDeleteSchema = Body()):
-    if settings.DEBUG:
-            token = request.headers.get('Authorization').split()
-    else:
-        _, token = request.cookies.get('Authorization').split()
+    token = await get_user_token(request)
     user_login = await get_login_by_token(token)
     info_deleted = dict(info)
     new_info = {'deleted': True}

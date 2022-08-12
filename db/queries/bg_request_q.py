@@ -1,11 +1,12 @@
 import datetime
-from sqlalchemy.exc import NoResultFound, DBAPIError
+from sqlalchemy.exc import NoResultFound, DBAPIError, MultipleResultsFound
 from sqlalchemy import select, update
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import joinedload, selectinload
 from db.models.banks import Banks, FZTypes
 
 from db.models.bg_request import BGRequest, BGTypes, WorksSpecifics
 
+from db.queries.raw_sql import banks_request_sql, request_info_sql
 
 
 async def add_new_bg_request(db_session,
@@ -58,15 +59,13 @@ async def get_bg_types_q(db_session):
 async def get_user_request_query(db_session, user_id: int, request_id: int):
     """ Получение конкретной заявки пользователя """
     async with db_session() as session:
-        sql = select(BGRequest).options(
-                        selectinload(BGRequest.banks_ids)
-                        ).where(BGRequest.user_id == user_id, BGRequest.id == request_id)
-        data = await session.execute(sql)
+        sql = request_info_sql.format(request_id=request_id, user_id=user_id)
         try:
-            data = data.one()
-        except NoResultFound:
+            data = await session.execute(sql)
+            data = data.all()
+        except (NoResultFound, MultipleResultsFound):
             return None
-    return data[0]
+        return data[0]
 
 
 async def get_user_requests_query(db_session, user_id: int):
@@ -80,25 +79,33 @@ async def get_user_requests_query(db_session, user_id: int):
     return data
 
 
-async def test_query(db_session):
-    async with db_session() as session:
-        sql = select(BGRequest).options(
-                selectinload(BGRequest.company_types),
-                selectinload(BGRequest.specifics_of_work),
-                selectinload(BGRequest.banks_ids),
-                selectinload(BGRequest.company_fz)
-                ).where(BGRequest.id == 3)
-        
-        data = await session.execute(sql)
-        data = data.one()
-
-
 async def update_request_info(db_session, request_id: int, **kwargs):
     """ Функция для обновления информации о заявке парсером """
     async with db_session() as session:
         request = update(BGRequest).where(BGRequest.id == request_id).values(**kwargs)
         await session.execute(request)
         await session.commit()
+
+
+async def get_banks_with_terms(session, request):
+    """ Возвращает список подходящих банков """
+    company_days = datetime.datetime.strptime(request.company_date_register, '%d.%m.%Y')
+    company_days = (datetime.datetime.today() - company_days).days
+    sql = banks_request_sql.format(
+                request_days=request.days,
+                request_amount=request.amount,
+                request_company_days=company_days,
+                request_capital=request.company_auth_capital,
+                request_lession_quarterly=request.lesion_amount,
+                request_execution_amount=request.company_executed_lists_sum,
+                request_debt_amount=request.company_tax_arrears_sum,
+                request_bg_type=request.bg_info.id,
+                request_fz_type=request.company_fz.id,
+                request_company_type=request.company_types.id if request.company_types is not None else 0,
+                request_last_revenue=request.company_last_revenue_sum)
+    banks = await session.execute(sql)
+    banks = banks.all()
+    return banks
 
 
 async def bg_request_banks_insert(db_session, request_id: int):
@@ -117,75 +124,20 @@ async def bg_request_banks_insert(db_session, request_id: int):
         except NoResultFound:
             return {"error": 'not request found'}
         request = request[0]
-        sql = select(Banks).options(
-                selectinload(Banks.fz_types),
-                selectinload(Banks.bg_types),
-                selectinload(Banks.company_type),
-                selectinload(Banks.valute_types)
-                )
-        data = await session.execute(sql)
-        data = data.all()
-        sql = select(Banks).options(
-                selectinload(Banks.fz_types),
-                selectinload(Banks.bg_types),
-                selectinload(Banks.company_type),
-                selectinload(Banks.valute_types)
-                )
-        data = await session.execute(sql)
+        banks = await get_banks_with_terms(session, request)
         total_banks = []
-        data = data.all()
-        for bank in data:
-            bank = bank[0]
-            if len(bank.fz_types) > 0 and request.company_fz not in bank.fz_types:
-                for fz in bank.fz_types:
-                    print(request.company_fz.id, fz.id)
-                    print(bank.name, fz.id, fz.name)
-                print('fz')
+        for bank in banks:
+            if not bank.mass_address and request.company_mass_address:
                 continue
-            if len(bank.bg_types) > 0 and request.bg_info not in bank.bg_types:
-                print('bg')
-                continue
-            if bank.min_guarante is not None and bank.max_guarante is not None and \
-                    bank.min_guarante > request.amount or bank.max_guarante < request.amount:
-                continue
-            if bank.min_days is not None and bank.max_days is not None and \
-                    bank.min_days > request.days or bank.max_days < request.days:
-                print('min max days', request.days, bank.min_days, bank.max_days)
-                continue
-            # if len(bank.company_type) > 0 and request.company_types not in bank.company_type:
-            #    print('company_type')
-            #    continue
-            company_days = datetime.datetime.strptime(request.company_date_register, '%d.%m.%Y')
-            company_days = datetime.datetime.today() - company_days
-            if company_days.days < bank.min_company_dates:
-                print('company_days')
-                continue
-            if request.company_auth_capital < bank.authorized_capital:
-                print('auth cap')
-                continue
-            if not bank.mass_address:
-                if request.company_mass_address:
-                    continue
-            if bank.percent_revenue is not None and bank.percent_revenue > 0:
-                company_revenue = request.company_last_revenue_sum * (bank.percent_revenue / 100)
-                if company_revenue > request.amount:
-                    continue
             if not bank.bankrupt and request.company_bankrupt:
-                continue
-            if bank.lesion_quarterly_amount > 0 and request.lesion_amount > bank.lesion_quarterly_amount:
-                continue
-            if bank.execution_lists_amount > 0 and bank.execution_lists_amount > request.company_executed_lists_sum:
-                continue
-            if bank.amount_debt_on_taxes_and_fees > request.company_tax_arrears_sum:
-                continue
-            if bank.rezident and not request.company_resident:
-                continue
+                if bank.rezident and not request.company_resident:
+                    continue
             if not bank.rnp and request.company_rnp:
                 continue
-            total_banks.append(bank)
+            total_banks.append(await session.get(Banks, bank.id))
         request.banks_ids = total_banks
         await session.commit()
-        return data
+        return banks
 
 
 async def get_fz_type_by_name(db_session, fz_name: str):
