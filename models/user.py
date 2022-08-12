@@ -17,20 +17,25 @@ class UserLoginSchema(BaseModel):
 
 
 class UserInfoSchema(BaseModel):
-    login: str
-    email: str
+    login: str | None
+    email: EmailStr
     inn: int = Field(lt=9999999999)
+    name_organization: str | None
     fio: str
     phone: str
     user_type: UserTypes
 
 
+class LoginResponseSchema(BaseModel):
+    user_info: UserInfoSchema
+    Authorization: str
+
 class UserAllInfoSchema(UserInfoSchema):
-    image: str | None
+    photo: str | None
 
 
 class UserRegisterSchema(UserInfoSchema):
-    password: str = Field()
+    password: str | None
 
     @validator('phone')
     def phone_validator(cls, v):
@@ -38,3 +43,32 @@ class UserRegisterSchema(UserInfoSchema):
         if v and not re.search(regex, v, re.I):
             raise ValueError('Phone number invalid')
         return v
+
+
+class UserUpdateSchema(BaseModel):
+    inn: int | None
+    fio: str | None
+    phone: str | None
+    email: EmailStr | None
+    password: str | None
+
+    @validator('phone')
+    def phone_validator(cls, v):
+        if v is None:
+            return v
+        regex = r"^(\+)7[0-9\-\(\)\.]{9,15}$"
+        if v and not re.search(regex, v, re.I):
+            raise ValueError('Phone number invalid')
+        return v
+
+
+class ReasonsDeletedShema(str, Enum):
+    bank_requirement = 'bank'
+    license = 'license'
+    conflict = 'conflict'
+    another = 'another'
+
+
+class UserDeleteSchema(BaseModel):
+    reason_deleted: ReasonsDeletedShema
+    delete_text: str | None

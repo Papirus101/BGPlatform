@@ -1,4 +1,3 @@
-from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import selectinload
 from db.models.banks import Banks
 

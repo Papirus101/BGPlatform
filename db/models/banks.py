@@ -78,8 +78,9 @@ class Banks(Base):
     valute_types = relationship('ValuteTypes', secondary=BankValuteTypes.__tablename__, backref='bank_valute_type') # отдельная логика
     stavka = Column(Integer, default=0)
     brokers_terms = Column(Integer, default=0)
-    manager = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), default=None, nullable=True)
+    manager_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), default=None, nullable=True)
     bg_system_name = Column(VARCHAR, default=None, nullable=True)
     bg_system_link = Column(VARCHAR, default=None, nullable=True)
-
+    
+    manager = relationship('User', backref='manager_bank')
 
