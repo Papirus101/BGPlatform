@@ -1,17 +1,20 @@
-from fastapi import APIRouter, Response, HTTPException, Body, Depends, Request
+from fastapi import APIRouter, Response, HTTPException, Body, Depends, Request, UploadFile
 
 from depends.auth.jwt_bearer import OAuth2PasswordBearerCookie
 from depends.auth.password_hash import hash_password, validate_password
 from depends.auth.jwt_handler import signJWT, get_login_by_token
 
-from models.user import LoginResponseSchema, UserRegisterSchema, UserLoginSchema, UserInfoSchema, UserAllInfoSchema, UserUpdateSchema, \
+from models.user import LoginResponseSchema, UserRegisterSchema, UserLoginSchema, UserAllInfoSchema, UserUpdateSchema, \
     UserDeleteSchema
 from db.queries.users_q import create_new_user, get_user_by_login, update_user_info_q
 from db.session import async_sessionmaker
 
 from parser.parser_zakupki import ZachetniyBiznesParser
-import settings
+
 from utils.utils import get_user_token
+
+import settings
+import aiofiles
 
 users_router = APIRouter(
     prefix='/user',
@@ -71,23 +74,39 @@ async def get_user_info(request: Request):
 
 
 @users_router.put('/me', dependencies=[Depends(OAuth2PasswordBearerCookie())], response_model=UserAllInfoSchema)
-async def update_user_info(request: Request, user: UserUpdateSchema = Body()):
-    if user.user_id is None:
-        token = await get_user_token(request)
-        user_login = await get_login_by_token(token)
-        user: dict = {k:v for k, v in user.__dict__.items() if v is not None}
-        if 'password' in user:
-            user['password'] = await hash_password(user['password'])
-        if 'inn' in user:
-            session = ZachetniyBiznesParser()
-            user['name_organization'] = await session.get_company_name(user['inn'])
-            if user['name_organization'] is None:
-                raise HTTPException(400, 'Invalid inn')
-            await session.close_session()
-        await update_user_info_q(async_sessionmaker, user_login, **user)
-        new_user_info = await get_user_by_login(async_sessionmaker, user_login)
-        return new_user_info.__dict__
+async def update_user_info(request: Request, user_request: UserUpdateSchema = Body()):
+    token = await get_user_token(request)
+    user_login = await get_login_by_token(token)
+    user: dict = {k:v for k, v in user_request.__dict__.items() if v is not None}
+    if 'password' in user:
+        user['password'] = await hash_password(user['password'])
+    if 'inn' in user:
+        session = ZachetniyBiznesParser()
+        user['name_organization'] = await session.get_company_name(user['inn'])
+        if user['name_organization'] is None:
+            raise HTTPException(400, 'Invalid inn')
+        await session.close_session()
+    await update_user_info_q(async_sessionmaker, user_login, **user)
+    new_user_info = await get_user_by_login(async_sessionmaker, user_login)
+    return new_user_info.__dict__
 
+
+@users_router.post('/update_photo', dependencies=[Depends(OAuth2PasswordBearerCookie())], status_code=204)
+async def update_user_photo(request: Request, photo: UploadFile):
+    if photo.content_type.find('image') == -1:
+        raise HTTPException(404, 'not valid photo')
+    token = await get_user_token(request)
+    user_login = await get_login_by_token(token)
+    user_info = await get_user_by_login(async_sessionmaker, user_login)
+    file_path = settings.USER_PHOTO_PATH.format(
+            filename=user_info.email,
+            user_type=user_info.user_type.code
+            )
+    async with aiofiles.open(file_path, 'wb') as out_file:
+        photo_content = await photo.read()
+        await out_file.write(photo_content)
+    await update_user_info_q(async_sessionmaker, user_login, photo=file_path)
+    return Response('', 204)
 
 @users_router.get('/logout', dependencies=[Depends(OAuth2PasswordBearerCookie())])
 async def logout(response: Response):

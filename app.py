@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from db.base import Base
 from db.session import engine
@@ -13,6 +14,7 @@ app = FastAPI(
         openapi_url='/api/openapi.json',
         )
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,

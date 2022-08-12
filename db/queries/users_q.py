@@ -34,7 +34,7 @@ async def get_user_by_login(db_session: AsyncSession,
         return data
 
 
-async def update_user_info_q(db_session: AsyncSession, login: int, **kwargs):
+async def update_user_info_q(db_session: AsyncSession, login: str, **kwargs):
     async with db_session() as session:
         sql = update(User).where(User.login == login).values(**kwargs)
         try:

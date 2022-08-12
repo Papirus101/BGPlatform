@@ -31,7 +31,7 @@ class LoginResponseSchema(BaseModel):
     Authorization: str
 
 class UserAllInfoSchema(UserInfoSchema):
-    image: str | None
+    photo: str | None
 
 
 class UserRegisterSchema(UserInfoSchema):
@@ -46,7 +46,6 @@ class UserRegisterSchema(UserInfoSchema):
 
 
 class UserUpdateSchema(BaseModel):
-    user_id: int | None
     inn: int | None
     fio: str | None
     phone: str | None
