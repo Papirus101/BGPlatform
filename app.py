@@ -1,12 +1,13 @@
+import traceback
+
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from db.base import Base
-from db.session import engine
-
 from routes.bg_request_router import bg_request_router
 from routes.users_router import users_router
+
+from utils.bot import send_telegram_error
 
 app = FastAPI(
         docs_url='/api/docs',
@@ -24,13 +25,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#async def catch_exceptions_middleware(request: Request, call_next):
-#    try:
-#        return await call_next(request)
-#    except Exception:
-#        return Response("Internal server error", status_code=500)
-#
-#app.middleware('http')(catch_exceptions_middleware)
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception:
+        await send_telegram_error(traceback.format_exc())
+        return Response("Internal server error", status_code=500)
+
+app.middleware('http')(catch_exceptions_middleware)
 
 
 #@app.on_event("startup")
