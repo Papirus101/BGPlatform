@@ -1,12 +1,13 @@
 import time
 import os
+from fastapi import HTTPException
 
 import jwt
 
 from dotenv import load_dotenv
 
 from db.queries.users_q import get_user_by_login
-from db.session import async_sessionmaker
+from db.session import get_session
 
 import settings
 
@@ -50,12 +51,14 @@ async def decodeJWT(token: str) -> str | None:
 
 async def get_user_by_token(token):
     user_login = await get_login_by_token(token)
-    return await get_user_by_login(async_sessionmaker, user_login)
+    return await get_user_by_login(await get_session(), user_login)
 
 
-async def get_login_by_token(token: str) -> str | None:
+async def get_login_by_token(token: str) -> str:
     if isinstance(token, list):
         token = token[1]
     token = token.encode('utf-8')
     decode_token = jwt.decode(token, JWT_SECRET, JWT_ALGORITHM)
-    return decode_token.get('user_info')
+    if decode_token.get('user_info') is None:
+        raise HTTPException(403)
+    return decode_token['user_info']

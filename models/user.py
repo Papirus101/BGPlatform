@@ -17,7 +17,7 @@ class UserLoginSchema(BaseModel):
 
 
 class UserInfoSchema(BaseModel):
-    login: str | None
+    login: str
     email: EmailStr
     inn: int = Field(lt=9999999999)
     name_organization: str | None
@@ -35,7 +35,7 @@ class UserAllInfoSchema(UserInfoSchema):
 
 
 class UserRegisterSchema(UserInfoSchema):
-    password: str | None
+    password: str
 
     @validator('phone')
     def phone_validator(cls, v):

@@ -16,7 +16,7 @@ from selenium.webdriver.firefox.options import Options
 from bs4 import BeautifulSoup as bss
 
 from db.queries.bg_request_q import get_fz_type_by_name, update_request_info
-from db.session import async_sessionmaker
+from db.session import get_session
 from utils.bot import send_telegram_error
 
 load_dotenv('.env')
@@ -146,12 +146,12 @@ class ZakupkiParse:
         await self.session.close()
         self.driver.close()
         self.company_data['company_fz_id'] = await get_fz_type_by_name(
-                async_sessionmaker,
+                await get_session(),
                 ''.join(i for i in re.findall(r'\d+', self.company_data['company_fz']))
             )
         del self.company_data['company_fz']
         await send_telegram_error(f'🛒 <strong>Закупки</strong>Спарсили информацию о компании {self.company_data}')
-        await update_request_info(async_sessionmaker, request_id, **self.company_data)
+        await update_request_info(await get_session(), request_id, **self.company_data)
 
 
 class ZachetniyBiznesParser:
@@ -250,4 +250,4 @@ class ZachetniyBiznesParser:
                         break
         await self.session.close()
         await send_telegram_error(f'🏪 <strong>Зачётный бизнес</strong> спарсили информацию {self.company_data}')
-        await update_request_info(async_sessionmaker, request_id, **self.company_data)
+        await update_request_info(await get_session(), request_id, **self.company_data)

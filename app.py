@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -24,11 +24,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+#async def catch_exceptions_middleware(request: Request, call_next):
+#    try:
+#        return await call_next(request)
+#    except Exception:
+#        return Response("Internal server error", status_code=500)
+#
+#app.middleware('http')(catch_exceptions_middleware)
 
-@app.on_event("startup")
-async def startup_event():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+
+#@app.on_event("startup")
+#async def startup_event():
+#    async with engine.begin() as conn:
+#        await conn.run_sync(Base.metadata.create_all)
+
 
 app.include_router(users_router, prefix='/api')
 app.include_router(bg_request_router, prefix='/api')
