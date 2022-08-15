@@ -23,6 +23,12 @@ jobs:
       DB_NAME: ${{ secrets.DB_NAME }}
       DB_USER: ${{ secrets.DB_USER }}
       DB_PASS: ${{ secrets.DB_PASS }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      ALGORITHM: ${{ secrets.ALGORITHM }}
+      PASSWORD_ALGORITHM: ${{ secrets.PASSWORD_ALGORITHM }}
+      SALT: ${{ secrets.SALT }}
+      SECRET: ${{ secrets.SECRET }}
+      TOKEN: ${{ secrets.TOKEN }}
     steps:
       - name: Check out repository
         uses: actions/checkout@master
@@ -34,4 +40,4 @@ jobs:
       - name: Install requirements
         run: pip install -r requirements.txt
       - name: Run tests
-        run: python -m unittest clicker_test.py
+        run: pytest tests.py -s
