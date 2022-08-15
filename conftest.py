@@ -10,24 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from dotenv import load_dotenv
 
+from db.queries.users_q import delete_user_from_db
+
 load_dotenv('.env')
-
-
-test_user = {
-        'login': 'awesome test',
-        'email': 'AwesomeTest@mail.ru',
-        'password': '1234567890XxX',
-        'inn': 2304068734,
-        'fio': 'This is test user',
-        'phone': '+79883258832',
-        'user_type': 'client'
-        }
-
-test_update_data = {
-        'inn': 4253025966,
-        'fio': 'This new fio test'
-        }
-
 
 @pytest.fixture
 def anyio_backend():
@@ -92,16 +77,30 @@ async def async_client(app: FastAPI):
         yield ac
 
 @pytest.fixture()
-async def async_client_auth(app: FastAPI):
+async def async_client_auth(app: FastAPI, test_register_user, get_session):
     async with AsyncClient(app=app, base_url="http://127.0.0.1:8000/api") as ac:
         response = await ac.post('/user/login', json={
-                'login': test_user['login'],
-                'password': test_user['password']
+                'login': test_register_user['login'],
+                'password': test_register_user['password']
             })
         if response.status_code == 404:
-            response = await ac.post('/user/signup', json=test_user)
+            response = await ac.post('/user/signup', json=test_register_user)
         ac.headers['Authorization'] = response.json().get('Authorization')
         yield ac
+        await delete_user_from_db(get_session, test_register_user['login'])
+
+
+@pytest.fixture()
+async def async_client_deleted_user(get_session, app: FastAPI, test_delete_user, delete_user_datas):
+    async with AsyncClient(app=app, base_url='http://127.0.0.1:8000/api') as ac:
+        response = await ac.post('/user/login', json=test_delete_user)
+        if response.status_code == 404:
+            response = await ac.post('user/signup', json=test_delete_user)
+        ac.headers['Authorization'] = response.json().get('Authorization')
+        await ac.post('/user/delete_user', json=delete_user_datas[0])
+        yield ac
+        await delete_user_from_db(get_session, test_delete_user['login'])
+
 
 @pytest.fixture()
 def delete_user_datas():
@@ -148,3 +147,34 @@ def test_register_user():
                 'phone': '+79884258833',
                 'user_type': 'client'
             }
+
+@pytest.fixture()
+def test_user():
+    return {
+                'login': 'awesome test',
+                'email': 'AwesomeTest@mail.ru',
+                'password': '1234567890XxX',
+                'inn': 2304068734,
+                'fio': 'This is test user',
+                'phone': '+79889258893',
+                'user_type': 'client'
+            }
+
+@pytest.fixture()
+def test_update_data_user():
+    return {
+                'inn': 7816704903,
+                'fio': 'this update fio'
+            }
+
+@pytest.fixture()
+def test_delete_user():
+    return {
+                'login': 'awesome deleted user',
+                'email': 'AwesomeDeletedUser@mail.ru',
+                'password': '123424524352XxX',
+                'inn': 2304068734,
+                'fio': 'This test deleted user',
+                'phone': '+79884458844',
+                'user_type': 'client'
+           }
