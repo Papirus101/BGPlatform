@@ -59,7 +59,7 @@ sortedcontainers==2.4.0
 soupsieve==2.3.2.post1
 SQLAlchemy==1.4.40
 SQLAlchemy-Utils==0.38.3
-starlette==0.20.4
+starlette==0.19.1
 toml==0.10.2
 tomli==2.0.1
 trio==0.21.0
