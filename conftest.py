@@ -103,3 +103,48 @@ async def async_client_auth(app: FastAPI):
         ac.headers['Authorization'] = response.json().get('Authorization')
         yield ac
 
+@pytest.fixture()
+def delete_user_datas():
+    return (
+            {
+                'reason_deleted': 'license',
+                'delete_text': 'Это причина удаления по отзыву лицензии'
+             },
+            {
+                'reason_deleted': 'conflict',
+                'delete_text': 'Это причиная удаления из-за конфликта'
+             },
+            {
+                'reason_deleted': 'bank',
+                'delete_text': 'Это причина из-за отзыва лицензии банком'
+            },
+            {
+                'reason_deleted': 'another',
+                'delete_text': 'Это какая-то другая причина'
+            }
+            )
+
+@pytest.fixture()
+def delete_user_bad_datas():
+    return (
+                {
+                    'reason_deleted': 'sjnsibg',
+                    'delete_text': 'Ошибочная причина удаения аккаунта'
+                },
+                {
+                    'reason_deleted': 'bank',
+                    'delete_text': 87542784527845
+                }
+            )
+
+@pytest.fixture()
+def test_register_user():
+    return {
+                'login': 'awesome tester',
+                'email': 'AwesomeTestered@mail.ru',
+                'password': '1234567890XxX',
+                'inn': 2304068734,
+                'fio': 'This is test user',
+                'phone': '+79884258833',
+                'user_type': 'client'
+            }

@@ -41,4 +41,4 @@ jobs:
       - name: Install requirements
         run: pip install -r requirements.txt
       - name: Run tests
-        run: pytest tests.py -s
+        run: python runtest.py

@@ -119,10 +119,7 @@ async def logout(response: Response):
 async def delete_user(response: Response, request: Request, info: UserDeleteSchema = Body(), session: AsyncSession = Depends(get_session)):
     token = await get_user_token(request)
     user_login = await get_login_by_token(token)
-    info_deleted = dict(info)
-    new_info = {'deleted': True}
-    for elem in info_deleted.keys():
-        if info_deleted[elem] is not None:
-            new_info[elem] = info_deleted[elem]
-    await update_user_info_q(session, user_login, **new_info)
+    info_deleted: dict = {k:v for k, v in info.__dict__.items() if v is not None}
+    info_deleted['deleted'] = True
+    await update_user_info_q(session, user_login, **info_deleted)
     response.delete_cookie('Authorization')

@@ -26,8 +26,8 @@ async def check_user_created(session, login: str):
     except NoResultFound:
         pass
 
-async def get_user_by_login(session, login: str):
-    sql = select(User).where(User.login == login, User.deleted == False)
+async def get_user_by_login(session, login: str, deleted: bool = False):
+    sql = select(User).where(User.login == login, User.deleted == deleted)
     try:
         data = await session.execute(sql)
         data = data.one()
@@ -51,6 +51,4 @@ async def update_user_info_q(session, login: str, **kwargs):
 async def delete_user_from_db(session, login: str):
     sql = delete(User).where(User.login == login)
     await session.execute(sql)
-    print('Прошёл экз')
     await session.commit()
-    print('commit ok')

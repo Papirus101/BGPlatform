@@ -72,3 +72,8 @@ class ReasonsDeletedShema(str, Enum):
 class UserDeleteSchema(BaseModel):
     reason_deleted: ReasonsDeletedShema
     delete_text: str | None
+
+    @validator('delete_text')
+    def delete_text_validator(cls, v):
+        if isinstance(v, int) or v.isdigit():
+            raise ValueError('Delete text invalid')
