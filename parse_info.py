@@ -1,14 +1,13 @@
 import asyncio
+import os
 
 from aio_pika import connect
 from aio_pika.abc import AbstractIncomingMessage
 from db.queries.bg_request_q import bg_request_banks_insert, update_request_info
-
-from parser.parser_zakupki import ZakupkiParse, ZachetniyBiznesParser
-
-from rabbit_send.publisher import send_message
-
 from db.session import get_session
+from parser.parser_zakupki import ZakupkiParse, ZachetniyBiznesParser
+from rabbit_send.publisher import send_message
+from dotenv import load_dotenv
 
 async def on_message_zachet(message: AbstractIncomingMessage) -> None:
     session = ZachetniyBiznesParser()
@@ -37,7 +36,8 @@ async def scoring_start(message: AbstractIncomingMessage) -> None:
     await update_request_info(db_session, int(message.body.decode()), is_ready=True)
 
 async def main() -> None:
-    connection = await connect(host='localhost')
+    load_dotenv('.env')
+    connection = await connect(host=os.getenv('RABBIT_HOST'))
     async with connection:
         channel = await connection.channel()
         queue_zachet = await channel.declare_queue("parse_zachet")
