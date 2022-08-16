@@ -76,8 +76,9 @@ async def async_client(app: FastAPI):
     async with AsyncClient(app=app, base_url="http://127.0.0.1/api") as ac:
         yield ac
 
+
 @pytest.fixture()
-async def async_client_auth(app: FastAPI, test_register_user, get_session):
+async def async_client_auth(app: FastAPI, test_register_user: dict):
     async with AsyncClient(app=app, base_url="http://127.0.0.1:8000/api") as ac:
         response = await ac.post('/user/login', json={
                 'login': test_register_user['login'],
@@ -87,8 +88,6 @@ async def async_client_auth(app: FastAPI, test_register_user, get_session):
             response = await ac.post('/user/signup', json=test_register_user)
         ac.headers['Authorization'] = response.json().get('Authorization')
         yield ac
-    await delete_user_from_db(get_session, test_register_user['login'])
-
 
 @pytest.fixture()
 async def async_client_deleted_user(get_session, app: FastAPI, test_delete_user, delete_user_data):
@@ -163,3 +162,17 @@ def test_delete_user():
                 'phone': '+79884458844',
                 'user_type': 'client'
            }
+
+
+@pytest.fixture()
+def test_bg_request_data():
+    return {
+                  "purchase_number": "32211550581",
+                  "inn": 4253025966,
+                  "amount": 10,
+                  "days": 10,
+                  "bg_type_id": 1,
+                  "last_quarter": "profit",
+                  "lesion_amount": 0,
+                  "specifics_of_work_id": 1
+            }

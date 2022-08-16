@@ -7,10 +7,11 @@ class BGRequestCreateSchema(BaseModel):
     inn: int
     amount: int
     days: int
-    bg_type: int
+    bg_type_id: int
     last_quarter: str = Field(default='profit')
     lesion_amount: int = Field(default=0)
-    specifics_of_work: int
+    specifics_of_work_id: int
+    is_ready: bool = Field(default=False)
 
 
 class BankInfo(BaseModel):

@@ -1,4 +1,6 @@
 import pytest
+from db.queries.bg_request_q import delete_bg_request, get_bg_types_q, \
+        get_specifics_works_q, get_user_requests_query
 
 from settings import USER_PHOTO_PATH
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,12 +64,12 @@ class TestUserApiAuth:
         response = await async_client_auth.post('/user/update_photo', files=file)
 
         assert response.status_code == 404
-    
+ 
     @pytest.mark.anyio
     async def test_user_delete(self, async_client_auth, db_session: AsyncSession,
-            delete_user_data: list[dict], test_register_user):
+            delete_user_data: dict, test_register_user):
         response = await async_client_auth.post('/user/delete_user',
-                    json=delete_user_data)
+                        json=delete_user_data)
         assert response.status_code == 200
         await update_user_info_q(db_session, test_register_user['login'], deleted=False)
 
@@ -147,3 +149,78 @@ class TestUserNonAuth:
             })
         assert response.status_code == 200
         await delete_user_from_db(db_session, test_user['login'])
+
+
+class TestBGRequest:
+
+    @pytest.mark.anyio
+    async def test_create_bg_request(self, async_client_auth, db_session: AsyncSession,
+            test_register_user, test_bg_request_data):
+        user = await get_user_by_login(db_session, test_register_user['login'])
+        user_requests = await get_user_requests_query(db_session, user.id)
+        response = await async_client_auth.post('/bg_request/new_bg_request',
+                json=test_bg_request_data)
+        current_user_requests = await get_user_requests_query(db_session, user.id)
+        
+        assert response.status_code == 200
+        assert len(current_user_requests) == len(user_requests) + 1
+
+        await delete_bg_request(db_session, current_user_requests[-1].id)
+
+
+    @pytest.mark.anyio
+    async def test_get_bg_request_info(self, async_client_auth, db_session: AsyncSession,
+            test_register_user, test_bg_request_data):
+        user = await get_user_by_login(db_session, test_register_user['login'])
+        await async_client_auth.post('bg_request/new_bg_request', json=test_bg_request_data)
+        current_user_requests = await get_user_requests_query(db_session, user.id)
+        response = await async_client_auth.get(f'/bg_request/get_user_request?request_id={current_user_requests[-1].id}')
+        assert response.status_code == 400
+        assert response.json() == {'detail': 'Request is not ready'}
+        await delete_bg_request(db_session, current_user_requests[-1].id)
+
+    @pytest.mark.anyio
+    async def test_get_bg_request_info_is_ready(self, async_client_auth,
+            test_bg_request_data, test_register_user, db_session: AsyncSession):
+        test_bg_request_data['is_ready'] = True
+        user = await get_user_by_login(db_session, test_register_user['login'])
+        await async_client_auth.post('bg_request/new_bg_request', json=test_bg_request_data)
+        current_user_requests = await get_user_requests_query(db_session, user.id)
+        response = await async_client_auth.get(f'/bg_request/get_user_request?request_id={current_user_requests[-1].id}')
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data['id'] == current_user_requests[-1].id
+        assert response_data['inn'] == test_bg_request_data['inn']
+        assert response_data['purchase_number'] == test_bg_request_data['purchase_number']
+        await delete_bg_request(db_session, current_user_requests[-1].id)
+
+    @pytest.mark.anyio
+    async def test_get_bg_request_info_bad_data(self, async_client_auth):
+        response = await async_client_auth.get('/bg_request/get_user/request?request_id=1')
+        assert response.status_code == 404
+
+    @pytest.mark.anyio
+    async def test_get_all_bg_requests_user(self, async_client_auth, db_session,
+            test_register_user):
+        response = await async_client_auth.get('/bg_request/get_user_requests')
+        assert response.status_code == 200
+        response_data = response.json()
+        user = await get_user_by_login(db_session, test_register_user['login'])
+        user_requests = await get_user_requests_query(db_session, user.id)
+        assert len(response_data['requests']) == len(user_requests)
+
+    @pytest.mark.anyio
+    async def test_get_bg_types(self, async_client_auth, db_session):
+        response = await async_client_auth.get('/bg_request/get_bg_types')
+        assert response.status_code == 200
+        response_data = response.json()
+        bg_types = await get_bg_types_q(db_session)
+        assert len(response_data['data']) == len(bg_types)
+
+    @pytest.mark.anyio
+    async def test_get_workspecifics_types(self, async_client_auth, db_session):
+        response = await async_client_auth.get('/bg_request/get_work_specifics')
+        assert response.status_code == 200
+        work_specifics = await get_specifics_works_q(db_session)
+        assert len(response.json()['data']) == len(work_specifics)
+
