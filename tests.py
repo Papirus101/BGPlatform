@@ -65,11 +65,10 @@ class TestUserApiAuth:
     
     @pytest.mark.anyio
     async def test_user_delete(self, async_client_auth, db_session: AsyncSession,
-            delete_user_datas: list[dict], test_register_user):
-        for delete_data in delete_user_datas:
-            response = await async_client_auth.post('/user/delete_user',
-                        json=delete_data)
-            assert response.status_code == 200
+            delete_user_data: list[dict], test_register_user):
+        response = await async_client_auth.post('/user/delete_user',
+                    json=delete_user_data)
+        assert response.status_code == 200
         await update_user_info_q(db_session, test_register_user['login'], deleted=False)
 
     @pytest.mark.anyio

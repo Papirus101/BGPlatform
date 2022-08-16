@@ -38,8 +38,8 @@ async def db_session() -> AsyncSession:
     async with engine.begin() as connection:
         async with async_session(bind=connection) as session:
             yield session
-            await session.flush()
-            await session.rollback()
+            #await session.flush()
+            #await session.rollback()
 
 
 @pytest.fixture()
@@ -87,42 +87,27 @@ async def async_client_auth(app: FastAPI, test_register_user, get_session):
             response = await ac.post('/user/signup', json=test_register_user)
         ac.headers['Authorization'] = response.json().get('Authorization')
         yield ac
-        await delete_user_from_db(get_session, test_register_user['login'])
+    await delete_user_from_db(get_session, test_register_user['login'])
 
 
 @pytest.fixture()
-async def async_client_deleted_user(get_session, app: FastAPI, test_delete_user, delete_user_datas):
+async def async_client_deleted_user(get_session, app: FastAPI, test_delete_user, delete_user_data):
     async with AsyncClient(app=app, base_url='http://127.0.0.1:8000/api') as ac:
         response = await ac.post('/user/login', json=test_delete_user)
         if response.status_code == 404:
             response = await ac.post('user/signup', json=test_delete_user)
         ac.headers['Authorization'] = response.json().get('Authorization')
-        await ac.post('/user/delete_user', json=delete_user_datas[0])
+        await ac.post('/user/delete_user', json=delete_user_data)
         yield ac
         await delete_user_from_db(get_session, test_delete_user['login'])
 
 
 @pytest.fixture()
-def delete_user_datas():
-    return (
-            {
+def delete_user_data():
+    return {
                 'reason_deleted': 'license',
                 'delete_text': 'Это причина удаления по отзыву лицензии'
-             },
-            {
-                'reason_deleted': 'conflict',
-                'delete_text': 'Это причиная удаления из-за конфликта'
-             },
-            {
-                'reason_deleted': 'bank',
-                'delete_text': 'Это причина из-за отзыва лицензии банком'
-            },
-            {
-                'reason_deleted': 'another',
-                'delete_text': 'Это какая-то другая причина'
-            }
-            )
-
+                }
 @pytest.fixture()
 def delete_user_bad_datas():
     return (
