@@ -31,7 +31,7 @@ async def catch_exceptions_middleware(request: Request, call_next):
         await send_telegram_error(traceback.format_exc())
         return Response("Internal server error", status_code=500)
 
-app.middleware('http')(catch_exceptions_middleware)
+#app.middleware('http')(catch_exceptions_middleware)
 
 app.include_router(users_router, prefix='/api')
 app.include_router(bg_request_router, prefix='/api')

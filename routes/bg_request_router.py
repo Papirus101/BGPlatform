@@ -20,7 +20,7 @@ bg_request_router = APIRouter(prefix='/bg_request',
                         response_model=BGRequestCreateSchema)
 async def create_new_bg_request(request: Request, bg_request: BGRequestCreateSchema = Body(),
         session: AsyncSession = Depends(get_session)):
-    user = await get_user_by_token(await get_user_token(request))
+    user = await get_user_by_token(await get_user_token(request), session)
     new_bg = await add_new_bg_request(session, user_id=user.id, **(dict(bg_request)))
     if new_bg is not None and isinstance(new_bg, dict) and 'error' in new_bg:
         raise HTTPException(404, new_bg)
@@ -34,17 +34,15 @@ async def create_new_bg_request(request: Request, bg_request: BGRequestCreateSch
                         responses={404: {'NOT FOUND': "NOT FOUND REQUESTS FROM USER"}})
 async def get_user_request_info(request: Request, request_id: int,
         session: AsyncSession = Depends(get_session)):
-    user = await get_user_by_token(await get_user_token(request))
+    user = await get_user_by_token(await get_user_token(request), session)
     data = await get_user_request_query(session, user.id, request_id)
-    if data is None:
-        raise HTTPException(404, {'NOT FOUND': "NOT FOUND REQUESTS FROM USER"})
     return data
 
 
 @bg_request_router.get('/get_user_requests', dependencies=[Depends(OAuth2PasswordBearerCookie())],
                        response_model=BGRequestsListSchema)
 async def get_user_requests(request: Request, session: AsyncSession = Depends(get_session)):
-    user = await get_user_by_token(await get_user_token(request))
+    user = await get_user_by_token(await get_user_token(request), session)
     data = await get_user_requests_query(session, user.id)
     return BGRequestsListSchema.parse_obj({'requests': data})
 

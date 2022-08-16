@@ -1,4 +1,6 @@
 import datetime
+import traceback
+from fastapi import HTTPException
 from sqlalchemy.exc import NoResultFound, DBAPIError, MultipleResultsFound
 from sqlalchemy import select, update
 from sqlalchemy.orm import joinedload, selectinload
@@ -35,7 +37,8 @@ async def add_new_bg_request(session,
         await session.flush()
         await session.commit()
     except DBAPIError:
-        return {'error': 'INN invalid'}
+        print(traceback.format_exc())
+        raise HTTPException(400, 'INN invalid')
     return new_bg_request
 
 
@@ -61,7 +64,7 @@ async def get_user_request_query(session, user_id: int, request_id: int):
         data = await session.execute(sql)
         data = data.all()
     except (NoResultFound, MultipleResultsFound):
-        return None
+        raise HTTPException(404, 'Not found request')
     return data[0]
 
 
@@ -78,6 +81,7 @@ async def get_user_requests_query(session, user_id: int):
 async def update_request_info(session, request_id: int, **kwargs):
     """ Функция для обновления информации о заявке парсером """
     request = update(BGRequest).where(BGRequest.id == request_id).values(**kwargs)
+    print(request)
     await session.execute(request)
     await session.commit()
 

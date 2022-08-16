@@ -14,10 +14,10 @@ class BGRequestCreateSchema(BaseModel):
 
 
 class BankInfo(BaseModel):
-    bank_id: int
-    bank_name: str
-    bank_stavka: int
-    brokers_terms: int
+    bank_id: int | None
+    bank_name: str | None
+    bank_stavka: int | None
+    brokers_terms: int | None
 
 class BGRequestDetailInfoSchema(BaseModel):
     id: int

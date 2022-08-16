@@ -157,5 +157,5 @@ cython_debug/
 migration/
 pyrightconfig.json
 alembic.ini
-
+settings.py
 *.jpg

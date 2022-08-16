@@ -8,20 +8,23 @@ from parser.parser_zakupki import ZakupkiParse, ZachetniyBiznesParser
 
 from rabbit_send.publisher import send_message
 
-from db.session import async_sessionmaker
+from db.session import get_session
 
 async def on_message_zachet(message: AbstractIncomingMessage) -> None:
     session = ZachetniyBiznesParser()
+    db_session = await anext(get_session())
+    print(db_session)
     print("Start parse zachet")
     inn, request_id = message.body.decode().split('_')
-    await session.get_info_company_request(inn, int(request_id))
+    await session.get_info_company_request(inn, int(request_id), db_session)
 
 
 async def on_message_zakupki(message: AbstractIncomingMessage) -> None:
     session = ZakupkiParse()
+    db_session = await anext(get_session())
     print('Start parse zakupki')
     purchase_id, request_id = message.body.decode().split('_')
-    info = await session.test(purchase_id, int(request_id))
+    info = await session.test(purchase_id, int(request_id), db_session)
     if info is None:
         return
     await send_message(request_id, 'start_scoring')
@@ -29,8 +32,9 @@ async def on_message_zakupki(message: AbstractIncomingMessage) -> None:
 
 async def scoring_start(message: AbstractIncomingMessage) -> None:
     print('Start', message.body.decode())
-    await bg_request_banks_insert(async_sessionmaker, int(message.body.decode()))
-    await update_request_info(async_sessionmaker, int(message.body.decode()), is_ready=True)
+    db_session = await anext(get_session())
+    await bg_request_banks_insert(db_session, int(message.body.decode()))
+    await update_request_info(db_session, int(message.body.decode()), is_ready=True)
 
 async def main() -> None:
     connection = await connect(host='localhost')

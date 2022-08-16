@@ -49,9 +49,9 @@ async def decodeJWT(token: str) -> str | None:
     return decode_token if decode_token['expires'] >= time.time() else None
 
 
-async def get_user_by_token(token):
+async def get_user_by_token(token, db_session):
     user_login = await get_login_by_token(token)
-    return await get_user_by_login(await get_session(), user_login)
+    return await get_user_by_login(db_session, user_login)
 
 
 async def get_login_by_token(token: str) -> str:

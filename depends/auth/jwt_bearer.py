@@ -16,6 +16,7 @@ class OAuth2PasswordBearerCookie(OAuth2):
         super().__init__(auto_error=auto_error)
 
     async def __call__(self, request: Request) -> Optional[str]:
+        print(settings.DEBUG)
         if settings.DEBUG:
             cookie_authorization: str = request.headers.get("Authorization")
         else:

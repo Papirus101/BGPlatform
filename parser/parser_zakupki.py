@@ -106,7 +106,7 @@ class ZakupkiParse:
         organization_page = await self.__create_request(organization_link, 'organization page', purchase_id)
         soup = bss(await organization_page.text(), 'html.parser')
 
-    async def test(self, purchase_id: str, request_id: int):
+    async def test(self, purchase_id: str, request_id: int, session):
         await self.__create_request(self.base_url, 'base page', purchase_id)
         await self.__create_request(self.base_search_url, 'base search url', purchase_id)
         await asyncio.sleep(5)
@@ -146,12 +146,12 @@ class ZakupkiParse:
         await self.session.close()
         self.driver.close()
         self.company_data['company_fz_id'] = await get_fz_type_by_name(
-                await get_session(),
+                session,
                 ''.join(i for i in re.findall(r'\d+', self.company_data['company_fz']))
             )
         del self.company_data['company_fz']
         await send_telegram_error(f'🛒 <strong>Закупки</strong>Спарсили информацию о компании {self.company_data}')
-        await update_request_info(await get_session(), request_id, **self.company_data)
+        await update_request_info(session, request_id, **self.company_data)
 
 
 class ZachetniyBiznesParser:
@@ -182,7 +182,7 @@ class ZachetniyBiznesParser:
     async def close_session(self):
         await self.session.close()
 
-    async def get_info_company_request(self, inn: int | str, request_id: int):
+    async def get_info_company_request(self, inn: int | str, request_id: int, session):
         self.company_data['company_name'] = await self.get_company_name(inn)
         page = await self.session.get(f'{self.card_url}{self.token}&id={inn}&_format=json')
         data = await page.json()
@@ -250,4 +250,4 @@ class ZachetniyBiznesParser:
                         break
         await self.session.close()
         await send_telegram_error(f'🏪 <strong>Зачётный бизнес</strong> спарсили информацию {self.company_data}')
-        await update_request_info(await get_session(), request_id, **self.company_data)
+        await update_request_info(session, request_id, **self.company_data)
