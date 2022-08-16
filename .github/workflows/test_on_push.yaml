@@ -34,6 +34,7 @@ jobs:
       SALT: ${{ secrets.SALT }}
       SECRET: ${{ secrets.SECRET }}
       TOKEN: ${{ secrets.TOKEN }}
+      RABBIT_HOST: ${{ secrets.RABBIT_HOST }}
     steps:
       - name: Check out repository
         uses: actions/checkout@master
