@@ -1,7 +1,8 @@
 import datetime
+from fastapi import HTTPException
 from sqlalchemy.exc import NoResultFound, DBAPIError, MultipleResultsFound
-from sqlalchemy import select, update
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy import delete, select, update
+from sqlalchemy.orm import selectinload
 from db.models.banks import Banks, FZTypes
 
 from db.models.bg_request import BGRequest, BGTypes, WorksSpecifics
@@ -9,33 +10,15 @@ from db.models.bg_request import BGRequest, BGTypes, WorksSpecifics
 from db.queries.raw_sql import banks_request_sql, request_info_sql
 
 
-async def add_new_bg_request(session,
-                             user_id: int,
-                             purchase_number: int,
-                             inn: int,
-                             amount: int,
-                             days: int,
-                             bg_type: int,
-                             last_quarter: str,
-                             specifics_of_work: int,
-                             lesion_amount: int = 0
-                             ):
+async def add_new_bg_request(session, user_id: int, **kwargs):
     """Функция для добавлеия новой заявки в базу"""
-    new_bg_request = BGRequest(user_id=user_id,
-                               purchase_number=purchase_number,
-                               inn=inn,
-                               amount=amount,
-                               days=days,
-                               bg_type_id=bg_type,
-                               last_quarter=last_quarter,
-                               specifics_of_work_id=specifics_of_work,
-                               lesion_amount=lesion_amount)
+    new_bg_request = BGRequest(user_id=user_id, **kwargs)
     try:
         session.add(new_bg_request)
-        await session.flush()
         await session.commit()
+        await session.flush()
     except DBAPIError:
-        return {'error': 'INN invalid'}
+        raise HTTPException(400, 'INN invalid')
     return new_bg_request
 
 
@@ -53,16 +36,17 @@ async def get_bg_types_q(session):
     return data
 
 
-
 async def get_user_request_query(session, user_id: int, request_id: int):
     """ Получение конкретной заявки пользователя """
     sql = request_info_sql.format(request_id=request_id, user_id=user_id)
     try:
         data = await session.execute(sql)
-        data = data.all()
+        data = data.one()
+        if not data.is_ready:
+            raise HTTPException(400, 'Request is not ready')
     except (NoResultFound, MultipleResultsFound):
-        return None
-    return data[0]
+        raise HTTPException(404, 'Not found request')
+    return data
 
 
 async def get_user_requests_query(session, user_id: int):
@@ -144,3 +128,12 @@ async def get_fz_type_by_name(session, fz_name: str):
     except NoResultFound:
         pass
     return None
+
+
+async def delete_bg_request(session, request_id: int):
+    sql = delete(BGRequest).where(BGRequest.id == request_id)
+    try:
+        await session.execute(sql)
+        await session.commit()
+    except:
+        session.rollback()

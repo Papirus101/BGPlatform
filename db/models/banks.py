@@ -1,4 +1,4 @@
-from sqlalchemy import BIGINT, Integer, Boolean, VARCHAR, Column, ForeignKey
+from sqlalchemy import BIGINT, Integer, Boolean, VARCHAR, Column, ForeignKey, event
 from sqlalchemy.orm import relationship
 
 from db.base import Base
@@ -83,4 +83,11 @@ class Banks(Base):
     bg_system_link = Column(VARCHAR, default=None, nullable=True)
     
     manager = relationship('User', backref='manager_bank')
+
+
+@event.listens_for(FZTypes.__table__, 'after_create')
+def insert_test_datas_company_types(mapper, connection, *args, **kwargs):
+    types = FZTypes.__table__
+    connection.execute(types.insert().values(name='44'))
+    connection.execute(types.insert().values(name='223'))
 

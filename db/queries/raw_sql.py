@@ -42,7 +42,8 @@ SELECT id,
        amount,
        days,
        json_agg(json_build_object('bank_id', bank_id, 'bank_name', bank_name, 'bank_stavka', bank_stavka,
-       'brokers_terms', brokers_terms)) as banks
+       'brokers_terms', brokers_terms)) as banks,
+       is_ready
 FROM bg_request as main_data
          LEFT JOIN (SELECT bank as bank_id,
                            request
@@ -54,6 +55,6 @@ FROM bg_request as main_data
                            stavka as bank_stavka,
                            brokers_terms
                     FROM banks) as bank_info on bank_info.bank_info_id = bank_id.bank_id
-WHERE id = {request_id}
+WHERE id = {request_id} AND user_id = {user_id}
 GROUP BY id
 """

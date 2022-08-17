@@ -1,6 +1,6 @@
 from sqlalchemy.orm import relationship
 from db.base import Base
-from sqlalchemy import Column, BIGINT, Integer, VARCHAR, ForeignKey, Boolean
+from sqlalchemy import Column, BIGINT, Integer, VARCHAR, ForeignKey, Boolean, event
 from sqlalchemy_utils import ChoiceType
 from db.models.banks import Banks
 
@@ -84,4 +84,21 @@ class BGRequest(Base):
     user = relationship(User, backref='bg_request_owner')
     specifics_of_work = relationship(WorksSpecifics, backref='bg_specifics_of_worf')
     banks_ids = relationship('Banks', secondary=BanksRequest.__tablename__, backref='banks_request')
+
+
+@event.listens_for(BGTypes.__table__, "after_create")
+def insert_test_datas_bg_type(mapper, connection, *args, **kwargs):
+    bg_types = BGTypes.__table__
+    connection.execute(bg_types.insert().values(name='Тест', description='test'))
+
+@event.listens_for(WorksSpecifics.__table__, "after_create")
+def insert_test_datas_work_specifics(mapper, connection, *args, **kwargs):
+    specific = WorksSpecifics.__table__
+    connection.execute(specific.insert().values(name='тестовая спецификация', description='тест описания'))
+
+@event.listens_for(CompanyTypes.__table__, 'after_create')
+def insert_test_datas_company_types(mapper, connection, *args, **kwargs):
+    types = CompanyTypes.__table__
+    connection.execute(types.insert().values(name='ООО'))
+    connection.execute(types.insert().values(name='ИП'))
 

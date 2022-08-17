@@ -7,17 +7,18 @@ class BGRequestCreateSchema(BaseModel):
     inn: int
     amount: int
     days: int
-    bg_type: int
+    bg_type_id: int
     last_quarter: str = Field(default='profit')
     lesion_amount: int = Field(default=0)
-    specifics_of_work: int
+    specifics_of_work_id: int
+    is_ready: bool = Field(default=False)
 
 
 class BankInfo(BaseModel):
-    bank_id: int
-    bank_name: str
-    bank_stavka: int
-    brokers_terms: int
+    bank_id: int | None
+    bank_name: str | None
+    bank_stavka: int | None
+    brokers_terms: int | None
 
 class BGRequestDetailInfoSchema(BaseModel):
     id: int

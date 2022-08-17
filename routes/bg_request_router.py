@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Body, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.queries.bg_request_q import add_new_bg_request, bg_request_banks_insert, get_bg_types_q, get_specifics_works_q, get_user_requests_query, get_user_request_query
+from db.queries.bg_request_q import add_new_bg_request, get_bg_types_q, get_specifics_works_q, get_user_requests_query, get_user_request_query
 from depends.auth.jwt_bearer import OAuth2PasswordBearerCookie
 from depends.auth.jwt_handler import get_user_by_token
 from models.bg_request_model import BGRequestCreateSchema, BGRequestDetailInfoSchema, BGRequestsListSchema, BGTypesSpicificsListShema
@@ -20,31 +20,27 @@ bg_request_router = APIRouter(prefix='/bg_request',
                         response_model=BGRequestCreateSchema)
 async def create_new_bg_request(request: Request, bg_request: BGRequestCreateSchema = Body(),
         session: AsyncSession = Depends(get_session)):
-    user = await get_user_by_token(await get_user_token(request))
+    user = await get_user_by_token(await get_user_token(request), session)
     new_bg = await add_new_bg_request(session, user_id=user.id, **(dict(bg_request)))
-    if new_bg is not None and isinstance(new_bg, dict) and 'error' in new_bg:
-        raise HTTPException(404, new_bg)
     await send_message(f'{bg_request.inn}_{new_bg.id}', 'parse_zachet')
     await send_message(f'{bg_request.purchase_number}_{new_bg.id}', 'parse_zakupki')
     return bg_request
 
 
-@bg_request_router.post('/get_user_request', dependencies=[Depends(OAuth2PasswordBearerCookie())],
+@bg_request_router.get('/get_user_request', dependencies=[Depends(OAuth2PasswordBearerCookie())],
                         response_model=BGRequestDetailInfoSchema,
                         responses={404: {'NOT FOUND': "NOT FOUND REQUESTS FROM USER"}})
 async def get_user_request_info(request: Request, request_id: int,
         session: AsyncSession = Depends(get_session)):
-    user = await get_user_by_token(await get_user_token(request))
+    user = await get_user_by_token(await get_user_token(request), session)
     data = await get_user_request_query(session, user.id, request_id)
-    if data is None:
-        raise HTTPException(404, {'NOT FOUND': "NOT FOUND REQUESTS FROM USER"})
     return data
 
 
 @bg_request_router.get('/get_user_requests', dependencies=[Depends(OAuth2PasswordBearerCookie())],
                        response_model=BGRequestsListSchema)
 async def get_user_requests(request: Request, session: AsyncSession = Depends(get_session)):
-    user = await get_user_by_token(await get_user_token(request))
+    user = await get_user_by_token(await get_user_token(request), session)
     data = await get_user_requests_query(session, user.id)
     return BGRequestsListSchema.parse_obj({'requests': data})
 
@@ -61,12 +57,6 @@ async def get_work_specifics(session: AsyncSession = Depends(get_session)):
 async def get_bg_types(session: AsyncSession = Depends(get_session)):
     data = await get_bg_types_q(session)
     return {'data': data}
-
-
-@bg_request_router.get('/test_query')
-async def test_request(session: AsyncSession = Depends(get_session)):
-    await bg_request_banks_insert(session, 28)
-
 
 @bg_request_router.get('/check_zakupki_gov', dependencies=[Depends(OAuth2PasswordBearerCookie())],
                        status_code=200, responses={503: {'service_offline': 'zskupki.gov offline'}})

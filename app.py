@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from routes.bg_request_router import bg_request_router
 from routes.users_router import users_router
+from utils.bot import send_telegram_error
 
 from utils.bot import send_telegram_error
 
@@ -33,13 +34,6 @@ async def catch_exceptions_middleware(request: Request, call_next):
         return Response("Internal server error", status_code=500)
 
 app.middleware('http')(catch_exceptions_middleware)
-
-
-#@app.on_event("startup")
-#async def startup_event():
-#    async with engine.begin() as conn:
-#        await conn.run_sync(Base.metadata.create_all)
-
 
 app.include_router(users_router, prefix='/api')
 app.include_router(bg_request_router, prefix='/api')
