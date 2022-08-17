@@ -11,15 +11,16 @@ async def send_telegram_error(text: str):
     channel_id = "@BGErrorsChanel"
     url += token
     method = url + "/sendMessage"
-    message = f'🧍 <b>{os.environ.get("USERNAME")}</b>' \
+    message = f'🧍 <b>{os.environ.get("USER")}</b> ' \
               f'{datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")} ⏱\n' \
               f'<code>{text}</code>'
     session = aiohttp.ClientSession()
-    await session.post(method, data={
+    r = await session.post(method, data={
             "chat_id": channel_id,
             "text": message,
             'parse_mode': 'HTML'
         })
+    print(r.json())
     await session.close()
 
 def send_sync_telegram_message(text: str):
@@ -28,11 +29,12 @@ def send_sync_telegram_message(text: str):
     channel_id = "@BGErrorsChanel"
     url += token
     method = url + "/sendMessage"
-    message = f'🧍 <b>{os.environ.get("USERNAME")}</b>' \
+    message = f'🧍 <b>{os.environ.get("USER")}</b> ' \
               f'{datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")} ⏱\n' \
-              f'<code>{text}</code>'
-    requests.post(method, json={
+              f'{text}'
+    r = requests.post(method, json={
             "chat_id": channel_id,
             "text": message,
             'parse_mode': 'HTML'
         })
+    print(r.json())

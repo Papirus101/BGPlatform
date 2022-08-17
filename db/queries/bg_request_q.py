@@ -61,6 +61,7 @@ async def get_user_requests_query(session, user_id: int):
 
 async def update_request_info(session, request_id: int, **kwargs):
     """ Функция для обновления информации о заявке парсером """
+    print('UPDATE INFO', *kwargs)
     request = update(BGRequest).where(BGRequest.id == request_id).values(**kwargs)
     await session.execute(request)
     await session.commit()

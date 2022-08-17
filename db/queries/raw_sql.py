@@ -39,6 +39,7 @@ request_info_sql = """
 SELECT id,
        inn,
        purchase_number,
+       purchase_name,
        amount,
        days,
        json_agg(json_build_object('bank_id', bank_id, 'bank_name', bank_name, 'bank_stavka', bank_stavka,

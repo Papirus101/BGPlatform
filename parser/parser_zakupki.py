@@ -77,6 +77,7 @@ class ZakupkiParse:
         return r
 
     async def fz_233_get_data(self, soup, purchase_id):
+        self.company_data['purchase_name'] = soup.find('div', {'class': 'registry-entry__body-value'}).text.strip()
         lots_link = soup.find_all('a', {'class': 'tabsNav__item'})[1].get('href')
         lots_page = await self.__create_request(self.domain + lots_link, 'lots page', purchase_id)
         soup = bss(await lots_page.text(), 'html.parser')
@@ -91,6 +92,8 @@ class ZakupkiParse:
     
     
     async def fz_44_get_data(self, soup, purchase_id):
+        self.company_data['purchase_name'] = soup.find('div', {'class': 'cardMainInfo__section'}).find(
+                'div', {'class': 'cardMainInfo__content'}).text.strip()
         self.company_data['company_address'] = soup.find(
                     'span', text='Место нахождения'
                     ).findParent(
@@ -152,6 +155,7 @@ class ZakupkiParse:
         del self.company_data['company_fz']
         await send_telegram_error(f'🛒 <strong>Закупки</strong>Спарсили информацию о компании {self.company_data}')
         await update_request_info(session, request_id, **self.company_data)
+        return True
 
 
 class ZachetniyBiznesParser:
@@ -249,5 +253,6 @@ class ZachetniyBiznesParser:
                             'IS_RESIDENT') if datas.get('@attributes').get('IS_RESIDENT') is not None else True
                         break
         await self.session.close()
+        print(self.company_data)
         await send_telegram_error(f'🏪 <strong>Зачётный бизнес</strong> спарсили информацию {self.company_data}')
         await update_request_info(session, request_id, **self.company_data)

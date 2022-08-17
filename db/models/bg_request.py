@@ -50,6 +50,7 @@ class BGRequest(Base):
     user_id = Column(ForeignKey(User.id, ondelete='CASCADE'), nullable=False)
     inn = Column(BIGINT)
     purchase_number = Column(VARCHAR, default=None, nullable=True)
+    purchase_name = Column(VARCHAR, default=None, nullable=True)
     amount = Column(Integer)
     days = Column(Integer)
     bg_type_id = Column(ForeignKey(BGTypes.id, ondelete='CASCADE'), nullable=False, default=1)

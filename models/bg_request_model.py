@@ -24,6 +24,7 @@ class BGRequestDetailInfoSchema(BaseModel):
     id: int
     inn: int
     purchase_number: str
+    purchase_name: str | None
     amount: int
     days: int
     banks: list[BankInfo]
