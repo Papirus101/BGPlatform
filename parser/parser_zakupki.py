@@ -15,7 +15,7 @@ from selenium.webdriver.firefox.options import Options
 
 from bs4 import BeautifulSoup as bss
 
-from db.queries.bg_request_q import get_fz_type_by_name, update_request_info
+from db.queries.bg_request_q import get_company_type_by_name, get_fz_type_by_name, update_request_info
 from db.session import get_session
 from utils.bot import send_telegram_error
 
@@ -24,15 +24,12 @@ load_dotenv('.env')
 
 class ZakupkiParse:
     def __init__(self):
-        #print('Connection create')
         self.company_data = {}
         options = Options()
         options.add_argument("--headless")
         self.driver = webdriver.Firefox(options=options)
-        # jar = aiohttp.CookieJar(unsafe=True, quote_cookie=False)
         self.session = aiohttp.ClientSession()
         self.base_url = 'https://zakupki.gov.ru/epz/main/public/home.html'
-        #self.driver.get(self.base_url)
         self.domain = 'https://zakupki.gov.ru'
         self.base_search_url = 'https://zakupki.gov.ru/epz/order/extendedsearch/results.html'
         self.order_page = 'https://zakupki.gov.ru/epz/order/notice/ea20/view/common-info.html?regNumber={purchase_id}'
@@ -45,12 +42,6 @@ class ZakupkiParse:
         if request.status != 200:
             return False
         return True
- 
-    async def _get_cookie(self):
-        driver = webdriver.Firefox()
-        driver.get(self.domain)
-        cookie = driver.get_cookies()
-        return cookie
 
     async def __create_request(self, url: str, name: str, purchase_id: str):
         itter = 1
@@ -61,7 +52,6 @@ class ZakupkiParse:
                 pass
 
         while True:
-            print(itter)
             if itter >= 20:
                 self.driver.get(self.base_url)
                 self.driver.get(url)
@@ -174,7 +164,8 @@ class ZachetniyBiznesParser:
         page = await self.session.get(f'{self.search_url}{self.token}&string={str(inn)}')
         data = await page.json()
         if data.get('status') != '200':
-            await send_telegram_error(f'🏪 <strong>Зачётный бизнес</strong> не получилось спарсить имя по ИНН {inn}')
+            await send_telegram_error(f'🏪 <strong>Зачётный бизнес</strong> не получилось спарсить имя по ИНН {inn}\n' \
+                    f'{self.search_url}{self.token}&string={str(inn)}')
             await self.session.close()
             return None       
         try:
@@ -188,6 +179,16 @@ class ZachetniyBiznesParser:
 
     async def get_info_company_request(self, inn: int | str, request_id: int, session):
         self.company_data['company_name'] = await self.get_company_name(inn)
+        company_type_id = None
+        for name in self.company_data['company_name'].split():
+            company_type_id = await get_company_type_by_name(session, name)
+            if company_type_id is not None:
+                break
+        if company_type_id is None:
+            await send_telegram_error(f'Ошибка при поиска ид типа компании inn: {inn}, request_id: {request_id}, ' \
+                    f'название компании: {self.company_data["company_name"]}')
+            return
+        self.company_data['company_type_id'] = company_type_id[0].id
         page = await self.session.get(f'{self.card_url}{self.token}&id={inn}&_format=json')
         data = await page.json()
         data = data.get('body').get('docs')[0]
@@ -211,7 +212,10 @@ class ZachetniyBiznesParser:
                 self.company_data['company_last_revenue_sum'])
         if data.get('СуммНедоимЗадолж') is not None and len(data.get('СуммНедоимЗадолж')) > 0:
             for nedoim in data.get('СуммНедоимЗадолж'):
-                self.company_data['company_tax_arrears_sum'] += nedoim
+                if isinstance(nedoim, dict):
+                    self.company_data['company_tax_arrears_sum'] += int(nedoim['ОбщСумНедоим'].split(',')[0].replace(' ', ''))
+                else:
+                    self.company_data['company_tax_arrears_sum'] += nedoim
         if data.get('СудыСтатистика') is not None and len(data.get('СудыСтатистика')) > 0:
             for otvet in data.get('СудыСтатистика').keys():
                 if otvet == 'Ответчик':
@@ -253,6 +257,5 @@ class ZachetniyBiznesParser:
                             'IS_RESIDENT') if datas.get('@attributes').get('IS_RESIDENT') is not None else True
                         break
         await self.session.close()
-        print(self.company_data)
         await send_telegram_error(f'🏪 <strong>Зачётный бизнес</strong> спарсили информацию {self.company_data}')
         await update_request_info(session, request_id, **self.company_data)

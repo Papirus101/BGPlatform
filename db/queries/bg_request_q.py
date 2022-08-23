@@ -1,13 +1,14 @@
 import datetime
 from fastapi import HTTPException
 from sqlalchemy.exc import NoResultFound, DBAPIError, MultipleResultsFound
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, update, func
 from sqlalchemy.orm import selectinload
 from db.models.banks import Banks, FZTypes
 
-from db.models.bg_request import BGRequest, BGTypes, WorksSpecifics
+from db.models.bg_request import BGRequest, BGTypes, CompanyTypes, WorksSpecifics
 
 from db.queries.raw_sql import banks_request_sql, request_info_sql
+from utils.bot import send_telegram_error
 
 
 async def add_new_bg_request(session, user_id: int, **kwargs):
@@ -85,6 +86,7 @@ async def get_banks_with_terms(session, request):
                 request_last_revenue=request.company_last_revenue_sum)
     banks = await session.execute(sql)
     banks = banks.all()
+    print(sql)
     return banks
 
 
@@ -107,11 +109,14 @@ async def bg_request_banks_insert(session, request_id: int):
     total_banks = []
     for bank in banks:
         if not bank.mass_address and request.company_mass_address:
+            print('mass')
             continue
         if not bank.bankrupt and request.company_bankrupt:
             if bank.rezident and not request.company_resident:
+                print('rezident')
                 continue
         if not bank.rnp and request.company_rnp:
+            print('rnp')
             continue
         total_banks.append(await session.get(Banks, bank.id))
     request.banks_ids = total_banks
@@ -138,3 +143,13 @@ async def delete_bg_request(session, request_id: int):
         await session.commit()
     except:
         session.rollback()
+
+
+async def get_company_type_by_name(session, company_type: str):
+    sql = select(CompanyTypes).where(func.lower(CompanyTypes.name).like(company_type.strip().lower()))
+    try:
+        data = await session.execute(sql)
+        data = data.one()
+    except NoResultFound:
+        return None
+    return data

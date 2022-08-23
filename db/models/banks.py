@@ -49,6 +49,14 @@ class FZTypes(Base):
     name = Column(VARCHAR)
 
 
+class WSTypesBank(Base):
+    __tablename__ = 'work_specific_bank'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    bank_id = Column(ForeignKey('banks.id', ondelete='CASCADE'))
+    work_specific_id = Column(ForeignKey('bg_words_specifics.id', ondelete='CASCADE'))
+
+
 class Banks(Base):
     __tablename__ = 'banks'
 
@@ -81,7 +89,8 @@ class Banks(Base):
     manager_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), default=None, nullable=True)
     bg_system_name = Column(VARCHAR, default=None, nullable=True)
     bg_system_link = Column(VARCHAR, default=None, nullable=True)
-    
+    work_specific = relationship('WorksSpecifics', secondary=WSTypesBank.__tablename__, backref='ws_banks')
+
     manager = relationship('User', backref='manager_bank')
 
 

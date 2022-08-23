@@ -6,7 +6,7 @@ import requests
 
 # Функция для отправки сообщений об ошибке в чатик телеграм
 async def send_telegram_error(text: str):
-    token = os.getenv("BOT_TOKEN")
+    token = str(os.getenv("BOT_TOKEN"))
     url = "https://api.telegram.org/bot"
     channel_id = "@BGErrorsChanel"
     url += token
@@ -20,7 +20,6 @@ async def send_telegram_error(text: str):
             "text": message,
             'parse_mode': 'HTML'
         })
-    print(r.json())
     await session.close()
 
 def send_sync_telegram_message(text: str):
@@ -37,4 +36,3 @@ def send_sync_telegram_message(text: str):
             "text": message,
             'parse_mode': 'HTML'
         })
-    print(r.json())

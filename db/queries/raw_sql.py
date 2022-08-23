@@ -27,9 +27,9 @@ WHERE min_days <= {request_days} AND max_days >= {request_days}
 AND min_guarante <= {request_amount} AND max_guarante >= {request_amount}
 AND min_company_dates <= {request_company_days} AND authorized_capital <= {request_capital}
 AND ({request_last_revenue} * (percent_revenue / 100)) <= {request_amount}
-AND lesion_quarterly_amount <= {request_lession_quarterly}
-AND execution_lists_amount <= {request_execution_amount}
-AND amount_debt_on_taxes_and_fees <= {request_debt_amount}
+AND lesion_quarterly_amount >= {request_lession_quarterly}
+AND execution_lists_amount >= {request_execution_amount}
+AND amount_debt_on_taxes_and_fees >= {request_debt_amount}
 AND {request_bg_type} = ANY(bg_types)
 AND {request_fz_type} = ANY(fz_types)
 AND {request_company_type} = ANY(company_types)

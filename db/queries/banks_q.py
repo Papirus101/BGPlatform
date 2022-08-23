@@ -1,5 +1,5 @@
 from sqlalchemy.orm import selectinload
-from db.models.banks import Banks
+from db.models.banks import Banks, ValuteTypes
 
 from sqlalchemy import select
 
@@ -11,4 +11,9 @@ async def get_all_banks(session):
             selectinload(Banks.valute_types))
     data = await session.execute(sql)
     data = data.all()
-        
+ 
+async def get_valute_types(session):
+    sql = select(ValuteTypes)
+    data = await session.execute(sql)
+    data = data.all()
+    return data
