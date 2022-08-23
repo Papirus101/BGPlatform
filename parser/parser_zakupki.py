@@ -2,10 +2,9 @@ import aiohttp
 import os
 import re
 import traceback
-
 import asyncio
-
 import datetime
+import settings
 
 from dotenv import load_dotenv
 from fastapi import HTTPException
@@ -27,7 +26,10 @@ class ZakupkiParse:
         self.company_data = {}
         options = Options()
         options.add_argument("--headless")
-        self.driver = webdriver.Firefox(options=options)
+        if settings.DEBUG:
+            self.driver = webdriver.Firefox(options=options, executable_path='/var/www/api/geckodriver')
+        else:
+            self.driver = webdriver.Firefox(options=options)
         self.session = aiohttp.ClientSession()
         self.base_url = 'https://zakupki.gov.ru/epz/main/public/home.html'
         self.domain = 'https://zakupki.gov.ru'
