@@ -86,7 +86,6 @@ async def get_banks_with_terms(session, request):
                 request_last_revenue=request.company_last_revenue_sum)
     banks = await session.execute(sql)
     banks = banks.all()
-    print(sql)
     return banks
 
 
@@ -109,14 +108,11 @@ async def bg_request_banks_insert(session, request_id: int):
     total_banks = []
     for bank in banks:
         if not bank.mass_address and request.company_mass_address:
-            print('mass')
             continue
         if not bank.bankrupt and request.company_bankrupt:
             if bank.rezident and not request.company_resident:
-                print('rezident')
                 continue
         if not bank.rnp and request.company_rnp:
-            print('rnp')
             continue
         total_banks.append(await session.get(Banks, bank.id))
     request.banks_ids = total_banks
@@ -136,6 +132,13 @@ async def get_fz_type_by_name(session, fz_name: str):
     return None
 
 
+async def get_all_fz_types(session):
+    sql = select(FZTypes)
+    data = await session.execute(sql)
+    data = data.all()
+    return data
+
+
 async def delete_bg_request(session, request_id: int):
     sql = delete(BGRequest).where(BGRequest.id == request_id)
     try:
@@ -147,6 +150,16 @@ async def delete_bg_request(session, request_id: int):
 
 async def get_company_type_by_name(session, company_type: str):
     sql = select(CompanyTypes).where(func.lower(CompanyTypes.name).like(company_type.strip().lower()))
+    try:
+        data = await session.execute(sql)
+        data = data.one()
+    except NoResultFound:
+        return None
+    return data
+
+
+async def get_bg_type_by_name(session, bg_type_name: str):
+    sql = select(BGTypes).where(func.lower(BGTypes.name).like(bg_type_name.strip().lower()))
     try:
         data = await session.execute(sql)
         data = data.one()

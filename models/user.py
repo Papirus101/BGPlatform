@@ -9,6 +9,7 @@ class UserTypes(str, Enum):
     client = 'client'
     agent = 'agent'
     bank = 'bank'
+    admin = 'admin'
 
 
 class UserLoginSchema(BaseModel):

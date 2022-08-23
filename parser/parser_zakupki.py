@@ -15,7 +15,6 @@ from selenium.webdriver.firefox.options import Options
 from bs4 import BeautifulSoup as bss
 
 from db.queries.bg_request_q import get_company_type_by_name, get_fz_type_by_name, update_request_info
-from db.session import get_session
 from utils.bot import send_telegram_error
 
 load_dotenv('.env')

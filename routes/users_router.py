@@ -27,6 +27,8 @@ users_router = APIRouter(
 @users_router.post('/signup', status_code=201, responses={400: {'error': 'inn invalid'}})
 async def user_signup(response: Response, user: UserRegisterSchema = Body(), session: AsyncSession = Depends(get_session)):
     await check_user_created(session, user.login)
+    if user.user_type == 'admin':
+        raise HTTPException(400)
     user.password = await hash_password(user.password)
     session_parser = ZachetniyBiznesParser()
     user.name_organization = await session_parser.get_company_name(user.inn)

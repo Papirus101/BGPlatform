@@ -7,7 +7,6 @@ import jwt
 from dotenv import load_dotenv
 
 from db.queries.users_q import get_user_by_login
-from db.session import get_session
 
 import settings
 

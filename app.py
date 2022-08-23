@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from routes.bg_request_router import bg_request_router
 from routes.users_router import users_router
+from routes.admin_router import admin_router
 from utils.bot import send_telegram_error
 
 app = FastAPI(
@@ -35,3 +36,4 @@ async def catch_exceptions_middleware(request: Request, call_next):
 
 app.include_router(users_router, prefix='/api')
 app.include_router(bg_request_router, prefix='/api')
+app.include_router(admin_router, prefix='/api')

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Body, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db.queries.bg_request_q import add_new_bg_request, bg_request_banks_insert, get_bg_types_q, get_specifics_works_q, get_user_requests_query, get_user_request_query
+from db.queries.bg_request_q import add_new_bg_request, bg_request_banks_insert, get_all_fz_types, get_bg_types_q, get_specifics_works_q, get_user_requests_query, get_user_request_query
 from depends.auth.jwt_bearer import OAuth2PasswordBearerCookie
 from depends.auth.jwt_handler import get_user_by_token
 from models.bg_request_model import BGRequestCreateSchema, BGRequestDetailInfoSchema, BGRequestsListSchema, BGTypesSpicificsListShema
@@ -71,6 +71,9 @@ async def check_zakupki_gov_available():
 async def get_valute_types(session: AsyncSession = Depends(get_session)):
     return await get_valute_types(session)
 
+@bg_request_router.get('/get_fz_types', dependencies=[Depends(OAuth2PasswordBearerCookie())])
+async def get_fz_types(session: AsyncSession = Depends(get_session)):
+    return await get_all_fz_types(session)
 
 @bg_request_router.get('/test')
 async def test_end(session: AsyncSession = Depends(get_session)):
