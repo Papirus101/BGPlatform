@@ -11,16 +11,17 @@ async def send_telegram_error(text: str):
     channel_id = "@BGErrorsChanel"
     url += token
     method = url + "/sendMessage"
-    message = f'🧍 <b>{os.environ.get("USER")}</b> ' \
-              f'{datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")} ⏱\n' \
-              f'<code>{text}</code>'
+    message = (
+        f'🧍 <b>{os.environ.get("USER")}</b> '
+        f'{datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")} ⏱\n'
+        f"<code>{text}</code>"
+    )
     session = aiohttp.ClientSession()
-    r = await session.post(method, data={
-            "chat_id": channel_id,
-            "text": message,
-            'parse_mode': 'HTML'
-        })
+    r = await session.post(
+        method, data={"chat_id": channel_id, "text": message, "parse_mode": "HTML"}
+    )
     await session.close()
+
 
 def send_sync_telegram_message(text: str):
     token = os.getenv("BOT_TOKEN")
@@ -28,11 +29,11 @@ def send_sync_telegram_message(text: str):
     channel_id = "@BGErrorsChanel"
     url += token
     method = url + "/sendMessage"
-    message = f'🧍 <b>{os.environ.get("USER")}</b> ' \
-              f'{datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")} ⏱\n' \
-              f'{text}'
-    r = requests.post(method, json={
-            "chat_id": channel_id,
-            "text": message,
-            'parse_mode': 'HTML'
-        })
+    message = (
+        f'🧍 <b>{os.environ.get("USER")}</b> '
+        f'{datetime.datetime.now().strftime("%d-%m-%Y %H:%M:%S")} ⏱\n'
+        f"{text}"
+    )
+    r = requests.post(
+        method, json={"chat_id": channel_id, "text": message, "parse_mode": "HTML"}
+    )

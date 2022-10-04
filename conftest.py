@@ -13,11 +13,12 @@ from dotenv import load_dotenv
 from db.queries.users_q import delete_user_from_db
 from settings import ASYNC_DB_LINK
 
-load_dotenv('.env')
+load_dotenv(".env")
+
 
 @pytest.fixture
 def anyio_backend():
-    return 'asyncio'
+    return "asyncio"
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -29,39 +30,40 @@ def event_loop():
 
 @pytest.fixture()
 async def db_session() -> AsyncSession:
-    engine = create_async_engine(ASYNC_DB_LINK.format(
-    db_user=os.getenv('DB_USER'),
-    db_pass=os.getenv('DB_PASS'),
-    db_host=os.getenv('DB_HOST'),
-    db_port=os.getenv('DB_PORT'),
-    db_name=os.getenv('DB_NAME')
-    ))
-
-    async_session = sessionmaker(
-        engine, expire_on_commit=False, class_=AsyncSession
+    engine = create_async_engine(
+        ASYNC_DB_LINK.format(
+            db_user=os.getenv("DB_USER"),
+            db_pass=os.getenv("DB_PASS"),
+            db_host=os.getenv("DB_HOST"),
+            db_port=os.getenv("DB_PORT"),
+            db_name=os.getenv("DB_NAME"),
+        )
     )
+
+    async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
     async with engine.begin() as connection:
         async with async_session(bind=connection) as session:
             yield session
-            #await session.flush()
-            #await session.rollback()
+            # await session.flush()
+            # await session.rollback()
 
 
 @pytest.fixture()
 async def get_session() -> AsyncSession:
-    engine = create_async_engine(ASYNC_DB_LINK.format(
-    db_user=os.getenv('DB_USER'),
-    db_pass=os.getenv('DB_PASS'),
-    db_host=os.getenv('DB_HOST'),
-    db_port=os.getenv('DB_PORT'),
-    db_name=os.getenv('DB_NAME')
-    ))
-
-    async_session = sessionmaker(
-        engine, expire_on_commit=False, class_=AsyncSession
+    engine = create_async_engine(
+        ASYNC_DB_LINK.format(
+            db_user=os.getenv("DB_USER"),
+            db_pass=os.getenv("DB_PASS"),
+            db_host=os.getenv("DB_HOST"),
+            db_port=os.getenv("DB_PORT"),
+            db_name=os.getenv("DB_NAME"),
+        )
     )
+
+    async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
     async with async_session() as session:
         yield session
+
 
 @pytest.fixture()
 def override_get_session(get_session: AsyncSession):
@@ -89,99 +91,105 @@ async def async_client(app: FastAPI):
 @pytest.fixture()
 async def async_client_auth(app: FastAPI, test_register_user: dict):
     async with AsyncClient(app=app, base_url="http://127.0.0.1:8000/api") as ac:
-        response = await ac.post('/user/login', json={
-                'login': test_register_user['login'],
-                'password': test_register_user['password']
-            })
+        response = await ac.post(
+            "/user/login",
+            json={
+                "login": test_register_user["login"],
+                "password": test_register_user["password"],
+            },
+        )
         if response.status_code == 404:
-            response = await ac.post('/user/signup', json=test_register_user)
-        ac.headers['Authorization'] = response.json().get('Authorization')
+            response = await ac.post("/user/signup", json=test_register_user)
+        ac.headers["Authorization"] = response.json().get("Authorization")
         yield ac
 
+
 @pytest.fixture()
-async def async_client_deleted_user(get_session, app: FastAPI, test_delete_user, delete_user_data):
-    async with AsyncClient(app=app, base_url='http://127.0.0.1:8000/api') as ac:
-        response = await ac.post('/user/login', json=test_delete_user)
+async def async_client_deleted_user(
+    get_session, app: FastAPI, test_delete_user, delete_user_data
+):
+    async with AsyncClient(app=app, base_url="http://127.0.0.1:8000/api") as ac:
+        response = await ac.post("/user/login", json=test_delete_user)
         if response.status_code == 404:
-            response = await ac.post('user/signup', json=test_delete_user)
-        ac.headers['Authorization'] = response.json().get('Authorization')
-        await ac.post('/user/delete_user', json=delete_user_data)
+            response = await ac.post("user/signup", json=test_delete_user)
+        ac.headers["Authorization"] = response.json().get("Authorization")
+        await ac.post("/user/delete_user", json=delete_user_data)
         yield ac
-        await delete_user_from_db(get_session, test_delete_user['login'])
+        await delete_user_from_db(get_session, test_delete_user["login"])
 
 
 @pytest.fixture()
 def delete_user_data():
     return {
-                'reason_deleted': 'license',
-                'delete_text': 'Это причина удаления по отзыву лицензии'
-                }
+        "reason_deleted": "license",
+        "delete_text": "Это причина удаления по отзыву лицензии",
+    }
+
+
 @pytest.fixture()
 def delete_user_bad_datas():
     return (
-                {
-                    'reason_deleted': 'sjnsibg',
-                    'delete_text': 'Ошибочная причина удаения аккаунта'
-                },
-                {
-                    'reason_deleted': 'bank',
-                    'delete_text': 87542784527845
-                }
-            )
+        {
+            "reason_deleted": "sjnsibg",
+            "delete_text": "Ошибочная причина удаения аккаунта",
+        },
+        {"reason_deleted": "bank", "delete_text": 87542784527845},
+    )
+
 
 @pytest.fixture()
 def test_register_user():
     return {
-                'login': 'awesome tester',
-                'email': 'AwesomeTestered@mail.ru',
-                'password': '1234567890XxX',
-                'inn': 2304068734,
-                'fio': 'This is test user',
-                'phone': '+79884258833',
-                'user_type': 'client'
-            }
+        "login": "awesome tester",
+        "email": "AwesomeTestered@mail.ru",
+        "password": "1234567890XxX",
+        "inn": 2304068734,
+        "fio": "This is test user",
+        "phone": "+79884258833",
+        "user_type": "client",
+    }
+
 
 @pytest.fixture()
 def test_user():
     return {
-                'login': 'awesome test',
-                'email': 'AwesomeTest@mail.ru',
-                'password': '1234567890XxX',
-                'inn': 2304068734,
-                'fio': 'This is test user',
-                'phone': '+79889258893',
-                'user_type': 'client'
-            }
+        "login": "awesome test",
+        "email": "AwesomeTest@mail.ru",
+        "password": "1234567890XxX",
+        "inn": 2304068734,
+        "fio": "This is test user",
+        "phone": "+79889258893",
+        "user_type": "client",
+    }
+
 
 @pytest.fixture()
 def test_update_data_user():
-    return {
-                'inn': 7816704903,
-                'fio': 'this update fio'
-            }
+    return {"inn": 7816704903, "fio": "this update fio"}
+
 
 @pytest.fixture()
 def test_delete_user():
     return {
-                'login': 'awesome deleted user',
-                'email': 'AwesomeDeletedUser@mail.ru',
-                'password': '123424524352XxX',
-                'inn': 2304068734,
-                'fio': 'This test deleted user',
-                'phone': '+79884458844',
-                'user_type': 'client'
-           }
+        "login": "awesome deleted user",
+        "email": "AwesomeDeletedUser@mail.ru",
+        "password": "123424524352XxX",
+        "inn": 2304068734,
+        "fio": "This test deleted user",
+        "phone": "+79884458844",
+        "user_type": "client",
+    }
 
 
 @pytest.fixture()
 def test_bg_request_data():
     return {
-                  "purchase_number": "32211550581",
-                  "inn": 4253025966,
-                  "amount": 10,
-                  "days": 10,
-                  "bg_type_id": 1,
-                  "last_quarter": "profit",
-                  "lesion_amount": 0,
-                  "specifics_of_work_id": 1
-            }
+        "purchase_number": "32211550581",
+        "inn": 4253025966,
+        "amount": 10,
+        "days": 10,
+        "bg_type_id": 1,
+        "last_quarter": "profit",
+        "lesion_amount": 0,
+        "specifics_of_work_id": 1,
+    }

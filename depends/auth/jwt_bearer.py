@@ -8,10 +8,11 @@ from depends.auth.jwt_handler import decodeJWT
 
 import settings
 
+
 class OAuth2PasswordBearerCookie(OAuth2):
     def __init__(
-            self,
-            auto_error: bool = True,
+        self,
+        auto_error: bool = True,
     ):
         super().__init__(auto_error=auto_error)
 
@@ -20,7 +21,7 @@ class OAuth2PasswordBearerCookie(OAuth2):
             cookie_authorization: str = request.headers.get("Authorization")
         else:
             cookie_authorization: str = request.cookies.get("Authorization")
-        
+
         cookie_scheme, cookie_param = get_authorization_scheme_param(
             cookie_authorization
         )
@@ -41,9 +42,7 @@ class OAuth2PasswordBearerCookie(OAuth2):
 
         if not authorization or scheme.lower() != "bearer" or valid is None:
             if self.auto_error:
-                raise HTTPException(
-                    status_code=403, detail="Not authenticated"
-                )
+                raise HTTPException(status_code=403, detail="Not authenticated")
             else:
                 return None
         return None

@@ -5,23 +5,23 @@ from sqlalchemy import Column, BIGINT, VARCHAR, Integer, ForeignKey, DateTime, B
 from sqlalchemy_utils import ChoiceType
 
 USER_TYPES = [
-    ('client', 'Клиент'),
-    ('agent', 'Агент'),
-    ('bank', 'Банк'),
-    ('admin', 'Администратор')
+    ("client", "Клиент"),
+    ("agent", "Агент"),
+    ("bank", "Банк"),
+    ("admin", "Администратор"),
 ]
 
 
 REASON_DELETED = [
-    ('bank', 'По требованию банка'),
-    ('license', 'Отзыв лицензии'),
-    ('conflict', 'Возникла конфликтная ситуация'),
-    ('another', 'Другая причина')
+    ("bank", "По требованию банка"),
+    ("license", "Отзыв лицензии"),
+    ("conflict", "Возникла конфликтная ситуация"),
+    ("another", "Другая причина"),
 ]
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     email = Column(VARCHAR, unique=True)

@@ -3,12 +3,16 @@ import os
 
 from dotenv import load_dotenv
 
-load_dotenv('.env')
+load_dotenv(".env")
 
 
 async def hash_password(password: str):
-    enc = hashlib.pbkdf2_hmac(f"{os.getenv('PASSWORD_ALGORITHM')}", password.encode(), os.getenv('SALT').encode(),
-                              100_000)
+    enc = hashlib.pbkdf2_hmac(
+        f"{os.getenv('PASSWORD_ALGORITHM')}",
+        password.encode(),
+        os.getenv("SALT").encode(),
+        100_000,
+    )
     return enc.hex()
 
 

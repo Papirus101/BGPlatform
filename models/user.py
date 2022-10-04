@@ -6,10 +6,10 @@ import re
 
 
 class UserTypes(str, Enum):
-    client = 'client'
-    agent = 'agent'
-    bank = 'bank'
-    admin = 'admin'
+    client = "client"
+    agent = "agent"
+    bank = "bank"
+    admin = "admin"
 
 
 class UserLoginSchema(BaseModel):
@@ -31,6 +31,7 @@ class LoginResponseSchema(BaseModel):
     user_info: UserInfoSchema
     Authorization: str
 
+
 class UserAllInfoSchema(UserInfoSchema):
     photo: str | None
 
@@ -38,11 +39,11 @@ class UserAllInfoSchema(UserInfoSchema):
 class UserRegisterSchema(UserInfoSchema):
     password: str
 
-    @validator('phone')
+    @validator("phone")
     def phone_validator(cls, v):
         regex = r"^(\+)7[0-9\-\(\)\.]{9,15}$"
         if v and not re.search(regex, v, re.I):
-            raise ValueError('Phone number invalid')
+            raise ValueError("Phone number invalid")
         return v
 
 
@@ -53,28 +54,28 @@ class UserUpdateSchema(BaseModel):
     email: EmailStr | None
     password: str | None
 
-    @validator('phone')
+    @validator("phone")
     def phone_validator(cls, v):
         if v is None:
             return v
         regex = r"^(\+)7[0-9\-\(\)\.]{9,15}$"
         if v and not re.search(regex, v, re.I):
-            raise ValueError('Phone number invalid')
+            raise ValueError("Phone number invalid")
         return v
 
 
 class ReasonsDeletedShema(str, Enum):
-    bank_requirement = 'bank'
-    license = 'license'
-    conflict = 'conflict'
-    another = 'another'
+    bank_requirement = "bank"
+    license = "license"
+    conflict = "conflict"
+    another = "another"
 
 
 class UserDeleteSchema(BaseModel):
     reason_deleted: ReasonsDeletedShema
     delete_text: str | None
 
-    @validator('delete_text')
+    @validator("delete_text")
     def delete_text_validator(cls, v):
         if isinstance(v, int) or v.isdigit():
-            raise ValueError('Delete text invalid')
+            raise ValueError("Delete text invalid")

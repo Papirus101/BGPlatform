@@ -8,7 +8,7 @@ class BGRequestCreateSchema(BaseModel):
     amount: int
     days: int
     bg_type_id: int
-    last_quarter: str = Field(default='profit')
+    last_quarter: str = Field(default="profit")
     lesion_amount: int = Field(default=0)
     specifics_of_work_id: int
     is_ready: bool = Field(default=False)
@@ -20,6 +20,7 @@ class BankInfo(BaseModel):
     bank_stavka: int | None
     brokers_terms: int | None
 
+
 class BGRequestDetailInfoSchema(BaseModel):
     id: int
     inn: int
@@ -28,6 +29,7 @@ class BGRequestDetailInfoSchema(BaseModel):
     amount: int
     days: int
     banks: list[BankInfo]
+
 
 class BGTypesSpecificsSchema(BaseModel):
     id: int
