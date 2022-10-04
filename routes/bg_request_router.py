@@ -74,19 +74,3 @@ async def get_valute_types(session: AsyncSession = Depends(get_session)):
 @bg_request_router.get('/get_fz_types', dependencies=[Depends(OAuth2PasswordBearerCookie())])
 async def get_fz_types(session: AsyncSession = Depends(get_session)):
     return await get_all_fz_types(session)
-
-@bg_request_router.get('/test')
-async def test_end(session: AsyncSession = Depends(get_session)):
-    await bg_request_banks_insert(session, 16)
-    return None
-
-
-# @bg_request_router.post('/start_auction', dependencies=[Depends(OAuth2PasswordBearerCookie())])
-# async def start_auction(request: Request, auction_info: BGRequestAuctionStart = Body()):
-#     await create_auction_q(async_sessionmaker, **dict(auction_info))
-#
-#
-# @bg_request_router.get('/get_auctions', dependencies=[Depends(OAuth2PasswordBearerCookie())])
-# async def get_auctions(request: Request):
-#     user = await get_user_by_token(request.cookies)
-#     await get_all_auctions_for_user_q(async_sessionmaker, user.id)

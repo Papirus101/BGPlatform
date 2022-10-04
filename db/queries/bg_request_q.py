@@ -8,7 +8,6 @@ from db.models.banks import Banks, FZTypes
 from db.models.bg_request import BGRequest, BGTypes, CompanyTypes, WorksSpecifics
 
 from db.queries.raw_sql import banks_request_sql, request_info_sql
-from utils.bot import send_telegram_error
 
 
 async def add_new_bg_request(session, user_id: int, **kwargs):
